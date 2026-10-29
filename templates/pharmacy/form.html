@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{% if medicine %}Edit Medicine{% else %}Add Formulary Item{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% if medicine %}Update Drug: {{ medicine.medicine_name }}{% else %}Add Medicine to Formulary{% endif %}</h1>
+    <p class="page-subtitle">Configure stock quantity, batch tracking, unit pricing, and manufacturer details</p>
+  </div>
+  <a href="{{ url_for('pharmacy.index') }}" class="btn-outline-custom">
+    <i class="bi bi-arrow-left"></i> Back to Pharmacy
+  </a>
+</div>
+
+<div class="card-box" style="max-width: 800px;">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-capsule-pill text-primary"></i> Medication Specifications</h3>
+  </div>
+  <div class="card-body-custom">
+    <form method="POST">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label-custom">Medicine Brand Name *</label>
+          <input type="text" name="medicine_name" class="form-control-custom" value="{{ medicine.medicine_name if medicine else '' }}" required placeholder="e.g. Amoxicillin 500mg">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Generic Name</label>
+          <input type="text" name="generic_name" class="form-control-custom" value="{{ medicine.generic_name if medicine else '' }}" placeholder="e.g. Amoxicillin Trihydrate">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label-custom">Category / Dosage Form</label>
+          <select name="category" class="form-select-custom">
+            {% for cat in ['Tablet', 'Capsule', 'Syrup', 'Injection', 'Inhaler', 'Ointment', 'Drops', 'IV Fluid'] %}
+              <option value="{{ cat }}" {% if medicine and medicine.category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label-custom">Batch Number *</label>
+          <input type="text" name="batch_no" class="form-control-custom" value="{{ medicine.batch_no if medicine else '' }}" required placeholder="e.g. BAT-2026-99A">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label-custom">Expiration Date *</label>
+          <input type="date" name="expiry_date" class="form-control-custom" value="{{ medicine.expiry_date.strftime('%Y-%m-%d') if medicine else '' }}" required>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label-custom">Current Stock Quantity *</label>
+          <input type="number" name="quantity" class="form-control-custom" value="{{ medicine.quantity if medicine else '50' }}" required min="0">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label-custom">Reorder Alert Level *</label>
+          <input type="number" name="reorder_level" class="form-control-custom" value="{{ medicine.reorder_level if medicine else '20' }}" required min="1">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label-custom">Unit Price ($) *</label>
+          <input type="number" step="0.01" name="unit_price" class="form-control-custom" value="{{ medicine.unit_price if medicine else '12.00' }}" required min="0.01">
+        </div>
+
+        <div class="col-12">
+          <label class="form-label-custom">Manufacturer / Pharmaceutical Company</label>
+          <input type="text" name="manufacturer" class="form-control-custom" value="{{ medicine.manufacturer if medicine else '' }}" placeholder="e.g. Pfizer, Novartis, Cipla, GSK...">
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+        <a href="{{ url_for('pharmacy.index') }}" class="btn-outline-custom">Cancel</a>
+        <button type="submit" class="btn-primary-custom">
+          <i class="bi bi-check2-circle"></i> {% if medicine %}Save Inventory Updates{% else %}Add to Formulary{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

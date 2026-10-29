@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Clinical Departments | CarePulse HMS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Hospital Clinical Departments</h1>
+    <p class="page-subtitle">Medical specialties, clinical service units, and assigned physician leadership</p>
+  </div>
+  <a href="{{ url_for('doctors.index') }}" class="btn-primary-custom">
+    <i class="bi bi-heart-pulse-fill"></i> View Specialist Doctors
+  </a>
+</div>
+
+<div class="row g-4">
+  {% for dept in departments %}
+  <div class="col-md-6 col-lg-3">
+    <div class="card-box h-100 p-4 d-flex flex-column justify-content-between">
+      <div>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div class="brand-icon-box" style="width: 44px; height: 44px; font-size: 20px; background: rgba(99, 102, 241, 0.1); color: #6366f1;">
+            <i class="bi bi-hospital"></i>
+          </div>
+          <span class="badge bg-light text-secondary border">Unit #{{ dept.id }}</span>
+        </div>
+        <h4 class="fw-bold text-dark mb-2">{{ dept.department_name }}</h4>
+        <p class="text-muted small mb-3">{{ dept.description or 'Specialized clinical hospital service and diagnostic care.' }}</p>
+      </div>
+      <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+        <span class="text-muted fs-8"><i class="bi bi-person-badge text-primary me-1"></i> {{ dept.doctors.count() }} Doctor(s)</span>
+        <a href="{{ url_for('doctors.index', dept_id=dept.id) }}" class="text-primary text-decoration-none small fw-semibold">
+          Doctors &rarr;
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+

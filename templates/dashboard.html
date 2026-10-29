@@ -1,0 +1,535 @@
+{% extends "base.html" %}
+{% block title %}Clinical & Operations Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  .trend-badge {
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+  .doctor-profile-card {
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+    background: #ffffff;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .doctor-profile-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .chart-container-box {
+    position: relative;
+    height: 310px;
+    width: 100%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Hospital Command Center</h1>
+    <p class="page-subtitle">Real-time clinical monitoring, throughput statistics, and hospital operations</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('appointments.book') }}" class="btn-primary-custom">
+      <i class="bi bi-calendar-plus-fill"></i> + New Appointment
+    </a>
+    <a href="{{ url_for('patients.register') }}" class="btn-outline-custom">
+      <i class="bi bi-person-plus-fill"></i> Register Patient
+    </a>
+  </div>
+</div>
+
+<!-- Quick Action Shortcuts Strip -->
+<div class="quick-action-strip">
+  <a href="{{ url_for('patients.register') }}" class="quick-action-btn">
+    <i class="bi bi-person-vcard text-primary fs-5"></i>
+    <span>New Patient</span>
+  </a>
+  <a href="{{ url_for('appointments.book') }}" class="quick-action-btn">
+    <i class="bi bi-calendar-plus text-success fs-5"></i>
+    <span>Book Appointment</span>
+  </a>
+  <a href="{{ url_for('admissions.admit') }}" class="quick-action-btn">
+    <i class="bi bi-door-open text-warning fs-5"></i>
+    <span>Admit to Bed</span>
+  </a>
+  <a href="{{ url_for('medical_records.create') }}" class="quick-action-btn">
+    <i class="bi bi-file-earmark-medical text-danger fs-5"></i>
+    <span>Document Consultation</span>
+  </a>
+  <a href="{{ url_for('laboratory.order') }}" class="quick-action-btn">
+    <i class="bi bi-virus2 text-info fs-5"></i>
+    <span>Order Lab Test</span>
+  </a>
+  <a href="{{ url_for('pharmacy.dispense') }}" class="quick-action-btn">
+    <i class="bi bi-capsule text-purple fs-5" style="color: #7c3aed;"></i>
+    <span>Dispense Meds</span>
+  </a>
+  <a href="{{ url_for('billing.create') }}" class="quick-action-btn">
+    <i class="bi bi-receipt text-success fs-5"></i>
+    <span>Create Invoice</span>
+  </a>
+</div>
+
+<!-- Stats Grid with Reference Trend Indicators -->
+<div class="stats-grid">
+  <!-- Doctors Card -->
+  <div class="stat-card blue">
+    <div>
+      <div class="d-flex align-items-center justify-content-between">
+        <span class="stat-label">Active Doctors</span>
+        <span class="trend-badge bg-primary-subtle text-primary">+15% in last 7 days</span>
+      </div>
+      <div class="stat-value">{{ total_doctors }}</div>
+      <div class="stat-subtext text-muted">Across 5 hospital specialties</div>
+    </div>
+    <div class="stat-icon blue">
+      <i class="bi bi-heart-pulse-fill"></i>
+    </div>
+  </div>
+
+  <!-- Patients Card -->
+  <div class="stat-card green">
+    <div>
+      <div class="d-flex align-items-center justify-content-between">
+        <span class="stat-label">Total Patients</span>
+        <span class="trend-badge bg-success-subtle text-success">+25% in last 7 days</span>
+      </div>
+      <div class="stat-value">{{ total_patients }}</div>
+      <div class="stat-subtext text-muted">Registered electronic medical dossiers</div>
+    </div>
+    <div class="stat-icon green">
+      <i class="bi bi-people-fill"></i>
+    </div>
+  </div>
+
+  <!-- Appointments Card -->
+  <div class="stat-card purple">
+    <div>
+      <div class="d-flex align-items-center justify-content-between">
+        <span class="stat-label">Appointments Today</span>
+        <span class="trend-badge bg-purple-subtle text-purple" style="background:#f3e8ff; color:#7c3aed;">+10% in last 7 days</span>
+      </div>
+      <div class="stat-value">{{ today_appointments_count }}</div>
+      <div class="stat-subtext text-muted">{{ pending_appointments_count }} total pending queue</div>
+    </div>
+    <div class="stat-icon purple">
+      <i class="bi bi-calendar-event-fill"></i>
+    </div>
+  </div>
+
+  <!-- Revenue Card -->
+  <div class="stat-card amber">
+    <div>
+      <div class="d-flex align-items-center justify-content-between">
+        <span class="stat-label">Gross Revenue</span>
+        <span class="trend-badge bg-success-subtle text-success">+20% in last 7 days</span>
+      </div>
+      <div class="stat-value">${{ "{:,.2f}".format(total_revenue or 0) }}</div>
+      <div class="stat-subtext text-muted">{{ pending_invoices_count }} invoices awaiting payment</div>
+    </div>
+    <div class="stat-icon amber">
+      <i class="bi bi-cash-stack"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Visual Analytics Row: Chart.js Appointment Statistics + Mini Calendar Schedule -->
+<div class="row g-4 mb-4">
+  <!-- Interactive Chart.js Appointment Statistics -->
+  <div class="col-lg-8">
+    <div class="card-box h-100 mb-0">
+      <div class="card-header-custom">
+        <div>
+          <h3 class="card-title-custom mb-1">
+            <i class="bi bi-bar-chart-fill text-primary"></i> Appointment Statistics
+          </h3>
+          <div class="d-flex gap-3 small text-muted">
+            <span><i class="bi bi-circle-fill text-primary fs-8"></i> Completed (6,314)</span>
+            <span><i class="bi bi-circle-fill text-info fs-8"></i> Ongoing (745)</span>
+            <span><i class="bi bi-circle-fill text-secondary fs-8"></i> Rescheduled / Cancelled (456)</span>
+          </div>
+        </div>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary active">Monthly</button>
+          <button class="btn btn-outline-secondary">Weekly</button>
+        </div>
+      </div>
+      <div class="card-body-custom">
+        <div class="chart-container-box">
+          <canvas id="appointmentChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar / Appointments Overview Widget -->
+  <div class="col-lg-4">
+    <div class="card-box h-100 mb-0">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom">
+          <i class="bi bi-calendar3 text-primary"></i> Consultations Calendar
+        </h3>
+        <span class="badge bg-primary text-white font-monospace">{{ today_appointments_count }} Today</span>
+      </div>
+      <div class="card-body-custom">
+        <!-- Date display header -->
+        <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded-3">
+          <button class="btn btn-sm btn-link text-dark p-0"><i class="bi bi-chevron-left"></i></button>
+          <span class="fw-bold small text-uppercase">October 2026</span>
+          <button class="btn btn-sm btn-link text-dark p-0"><i class="bi bi-chevron-right"></i></button>
+        </div>
+
+        <!-- Mini Calendar Days -->
+        <div class="row g-1 text-center small mb-3">
+          <div class="col text-muted fs-8 fw-bold">Sun</div>
+          <div class="col text-muted fs-8 fw-bold">Mon</div>
+          <div class="col text-muted fs-8 fw-bold">Tue</div>
+          <div class="col text-muted fs-8 fw-bold">Wed</div>
+          <div class="col text-muted fs-8 fw-bold">Thu</div>
+          <div class="col text-muted fs-8 fw-bold">Fri</div>
+          <div class="col text-muted fs-8 fw-bold">Sat</div>
+
+          <div class="col p-1 text-muted opacity-50">28</div>
+          <div class="col p-1 text-muted opacity-50">29</div>
+          <div class="col p-1 text-muted opacity-50">30</div>
+          <div class="col p-1">1</div>
+          <div class="col p-1">2</div>
+          <div class="col p-1">3</div>
+          <div class="col p-1">4</div>
+
+          <div class="col p-1">5</div>
+          <div class="col p-1">6</div>
+          <div class="col p-1">7</div>
+          <div class="col p-1">8</div>
+          <div class="col p-1">9</div>
+          <div class="col p-1">10</div>
+          <div class="col p-1">11</div>
+
+          <div class="col p-1">12</div>
+          <div class="col p-1 bg-primary text-white rounded-circle fw-bold">13</div>
+          <div class="col p-1">14</div>
+          <div class="col p-1">15</div>
+          <div class="col p-1">16</div>
+          <div class="col p-1">17</div>
+          <div class="col p-1">18</div>
+        </div>
+
+        <h6 class="fw-bold small text-muted text-uppercase mb-2">Today's Timeline</h6>
+        <div class="list-group list-group-flush">
+          {% for apt in today_appointments[:3] %}
+          <div class="list-group-item px-0 py-2 border-light small">
+            <div class="d-flex justify-content-between fw-semibold">
+              <span class="text-primary font-monospace">{{ apt.time_slot }}</span>
+              <span class="badge-custom badge-{{ apt.status.lower() }}">{{ apt.status }}</span>
+            </div>
+            <div class="text-dark">{{ apt.patient.name }} &bull; {{ apt.doctor.name }}</div>
+          </div>
+          {% else %}
+          <div class="text-muted small py-2">No consults scheduled for today.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popular Specialists Section (Matching Reference UI) -->
+<div class="card-box mb-4">
+  <div class="card-header-custom">
+    <div>
+      <h3 class="card-title-custom mb-0"><i class="bi bi-star-fill text-warning"></i> Popular Doctors & Specialists</h3>
+      <span class="text-muted small">Leading clinicians and department heads</span>
+    </div>
+    <a href="{{ url_for('doctors.index') }}" class="btn btn-sm btn-light">View All Specialists</a>
+  </div>
+  <div class="card-body-custom">
+    <div class="row g-3">
+      {% for doc in popular_doctors %}
+      <div class="col-md-6 col-lg-3">
+        <div class="doctor-profile-card">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="user-avatar-circle" style="width: 44px; height: 44px; font-size: 1.1rem; background: linear-gradient(135deg, #2563eb, #7c3aed);">
+              {{ doc.name[:2].upper() }}
+            </div>
+            <div>
+              <div class="fw-bold text-dark small text-truncate" style="max-width: 140px;">{{ doc.name }}</div>
+              <span class="text-muted fs-8">{{ doc.specialization }}</span>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top small">
+            <span class="text-muted">Fee: <strong class="text-success">${{ "{:,.2f}".format(doc.consultation_fee) }}</strong></span>
+            <a href="{{ url_for('appointments.book', doctor_id=doc.id) }}" class="btn btn-sm btn-outline-primary py-0 fs-8">Book</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Main Row: Today's Appointments & Ward Matrix -->
+<div class="row g-4 mb-4">
+  <!-- Today's Appointments Table -->
+  <div class="col-lg-8">
+    <div class="card-box h-100 mb-0">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom">
+          <i class="bi bi-clock-history text-primary"></i> Today's Appointment Schedule
+        </h3>
+        <a href="{{ url_for('appointments.index') }}" class="btn btn-sm btn-light">Full Schedule</a>
+      </div>
+      <div class="custom-table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Patient</th>
+              <th>Doctor</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for apt in today_appointments %}
+            <tr>
+              <td class="fw-bold text-primary font-monospace">{{ apt.time_slot }}</td>
+              <td>
+                <a href="{{ url_for('patients.profile', patient_id=apt.patient.id) }}" class="fw-semibold text-dark">
+                  {{ apt.patient.name }}
+                </a>
+                <div class="text-muted fs-8">{{ apt.patient.patient_no }}</div>
+              </td>
+              <td>{{ apt.doctor.name }}</td>
+              <td><span class="text-truncate d-inline-block" style="max-width: 160px;">{{ apt.reason or 'Consultation' }}</span></td>
+              <td>
+                <span class="badge-custom badge-{{ apt.status.lower() }}">{{ apt.status }}</span>
+              </td>
+              <td>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-light border-0" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li>
+                      <form method="POST" action="{{ url_for('appointments.update_status', appointment_id=apt.id) }}">
+                        <input type="hidden" name="status" value="In-Progress">
+                        <button type="submit" class="dropdown-item">Mark In-Progress</button>
+                      </form>
+                    </li>
+                    <li>
+                      <form method="POST" action="{{ url_for('appointments.update_status', appointment_id=apt.id) }}">
+                        <input type="hidden" name="status" value="Completed">
+                        <button type="submit" class="dropdown-item text-success">Mark Completed</button>
+                      </form>
+                    </li>
+                    <li>
+                      <form method="POST" action="{{ url_for('appointments.update_status', appointment_id=apt.id) }}">
+                        <input type="hidden" name="status" value="Cancelled">
+                        <button type="submit" class="dropdown-item text-danger">Cancel</button>
+                      </form>
+                    </li>
+                  </ul>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">
+                <i class="bi bi-calendar2-check fs-2 d-block mb-2 text-secondary"></i>
+                No appointments scheduled for today.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ward Bed Capacity Breakdown -->
+  <div class="col-lg-4">
+    <div class="card-box h-100 mb-0">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom">
+          <i class="bi bi-hospital-fill text-purple" style="color: #7c3aed;"></i> Bed Capacity
+        </h3>
+        <a href="{{ url_for('admissions.beds') }}" class="btn btn-sm btn-light">Bed Matrix</a>
+      </div>
+      <div class="card-body-custom">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <span class="fs-4 fw-bold text-dark">{{ occupied_beds }}</span>
+            <span class="text-muted small">/ {{ total_beds }} Occupied</span>
+          </div>
+          <span class="badge-custom badge-available">{{ available_beds }} Free</span>
+        </div>
+
+        <div class="progress mb-4" style="height: 10px; border-radius: 999px;">
+          <div class="progress-bar bg-primary" role="progressbar" style="width: {{ occupancy_rate }}%;"></div>
+        </div>
+
+        <div class="ward-stats-list">
+          {% for w in ward_stats %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small fw-semibold mb-1">
+              <span>{{ w.name }}</span>
+              <span class="text-muted">{{ w.occupied }}/{{ w.total }} Beds</span>
+            </div>
+            <div class="progress" style="height: 6px; border-radius: 999px;">
+              {% set w_pct = (w.occupied / w.total * 100) if w.total > 0 else 0 %}
+              <div class="progress-bar {% if w_pct > 80 %}bg-danger{% elif w_pct > 50 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ w_pct }}%;"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Secondary Row: Pharmacy Alerts & Recent Activity -->
+<div class="row g-4">
+  <!-- Pharmacy Alerts -->
+  <div class="col-lg-6">
+    <div class="card-box h-100 mb-0">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom">
+          <i class="bi bi-exclamation-triangle-fill text-danger"></i> Pharmacy Low Stock Alerts
+        </h3>
+        <a href="{{ url_for('pharmacy.index', alert='low_stock') }}" class="btn btn-sm btn-light">Stock Center</a>
+      </div>
+      <div class="custom-table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Medicine</th>
+              <th>Category</th>
+              <th>Stock</th>
+              <th>Reorder Min</th>
+              <th>Unit Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for med in low_stock_medicines %}
+            <tr>
+              <td class="fw-bold">{{ med.medicine_name }}</td>
+              <td><span class="badge bg-light text-dark">{{ med.category }}</span></td>
+              <td><span class="badge-custom badge-danger">{{ med.quantity }} left</span></td>
+              <td class="text-muted">{{ med.reorder_level }}</td>
+              <td>${{ "{:,.2f}".format(med.unit_price) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-success">
+                <i class="bi bi-check-circle fs-3 d-block mb-1"></i>
+                All essential medications are well stocked!
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audit Activity Trail -->
+  <div class="col-lg-6">
+    <div class="card-box h-100 mb-0">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom">
+          <i class="bi bi-shield-check text-info"></i> Recent System Audit Logs
+        </h3>
+        {% if current_user.has_role('admin') %}
+        <a href="{{ url_for('audit.index') }}" class="btn btn-sm btn-light">Audit Trail</a>
+        {% endif %}
+      </div>
+      <div class="card-body-custom p-0">
+        <div class="list-group list-group-flush">
+          {% for log in recent_logs %}
+          <div class="list-group-item px-4 py-3 border-light">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="badge bg-secondary-subtle text-secondary small">{{ log.action }}</span>
+              <span class="text-muted fs-8">{{ log.created_at.strftime('%H:%M:%S') }}</span>
+            </div>
+            <div class="small fw-semibold text-dark">{{ log.details or log.action }}</div>
+            <div class="text-muted fs-8">User: <strong>@{{ log.username }}</strong> &bull; IP: {{ log.ip_address }}</div>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted small">No audit logs recorded yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js for interactive analytics graph -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('appointmentChart');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+          datasets: [
+            {
+              label: 'Completed',
+              data: [120, 180, 240, 310, 280, 390, 420, 480, 510, 450, 380, 410],
+              backgroundColor: '#2563eb',
+              borderRadius: 6,
+              barThickness: 14
+            },
+            {
+              label: 'Ongoing / Scheduled',
+              data: [45, 60, 75, 90, 85, 110, 130, 140, 160, 120, 95, 105],
+              backgroundColor: '#7c3aed',
+              borderRadius: 6,
+              barThickness: 14
+            },
+            {
+              label: 'Rescheduled / Cancelled',
+              data: [20, 25, 30, 35, 25, 40, 45, 50, 55, 35, 30, 32],
+              backgroundColor: '#e2e8f0',
+              borderRadius: 6,
+              barThickness: 14
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              padding: 12,
+              cornerRadius: 8
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false }
+            },
+            y: {
+              grid: { color: '#f1f5f9' },
+              ticks: { stepSize: 100 }
+            }
+          }
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

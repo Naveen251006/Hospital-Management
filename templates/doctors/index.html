@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Medical Specialists & Doctors{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Medical Staff & Specialists</h1>
+    <p class="page-subtitle">Departmental medical consultants, outpatient schedules, and clinical fees</p>
+  </div>
+  {% if current_user.has_role('admin') %}
+  <a href="{{ url_for('doctors.create') }}" class="btn-primary-custom">
+    <i class="bi bi-person-plus-fill"></i> Add New Doctor
+  </a>
+  {% endif %}
+</div>
+
+<!-- Department Filter Tabs -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{{ url_for('doctors.index') }}" class="btn btn-sm {% if not selected_dept %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    All Departments
+  </a>
+  {% for d in departments %}
+  <a href="{{ url_for('doctors.index', dept_id=d.id) }}" class="btn btn-sm {% if selected_dept == d.id %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    {{ d.department_name }}
+  </a>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  {% for doc in doctors %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card-box h-100 mb-0">
+      <div class="card-body-custom d-flex flex-column justify-content-between h-100">
+        <div>
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="user-avatar-circle" style="width: 54px; height: 54px; font-size: 1.3rem; background: linear-gradient(135deg, #2563eb, #7c3aed);">
+              {{ doc.name[:2].upper() }}
+            </div>
+            <div>
+              <h5 class="fw-bold mb-0 text-dark">{{ doc.name }}</h5>
+              <div class="badge bg-primary-subtle text-primary mt-1">{{ doc.specialization }}</div>
+            </div>
+          </div>
+
+          <div class="p-3 bg-light rounded-3 mb-3 small">
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">Department:</span>
+              <span class="fw-semibold">{{ doc.department.department_name if doc.department else 'General' }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">Qualification:</span>
+              <span class="fw-semibold">{{ doc.qualification or 'MD' }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">Consultation Fee:</span>
+              <span class="fw-bold text-success">${{ "{:,.2f}".format(doc.consultation_fee) }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">Clinic Room:</span>
+              <span class="fw-semibold">{{ doc.room_no or 'Suite A' }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">License:</span>
+              <span class="font-monospace text-muted">{{ doc.license_no or '—' }}</span>
+            </div>
+          </div>
+
+          <div class="small text-muted mb-2">
+            <i class="bi bi-calendar-week text-primary me-1"></i> {{ doc.available_days }}
+          </div>
+          <div class="small text-muted mb-3">
+            <i class="bi bi-clock text-primary me-1"></i> {{ doc.available_time }}
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 pt-3 border-top">
+          <a href="{{ url_for('doctors.profile', doctor_id=doc.id) }}" class="btn btn-sm btn-outline-primary flex-fill">
+            <i class="bi bi-eye"></i> Schedule & Profile
+          </a>
+          <a href="{{ url_for('appointments.book', doctor_id=doc.id) }}" class="btn btn-sm btn-primary-custom flex-fill justify-content-center">
+            <i class="bi bi-calendar-plus"></i> Book
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12 text-center py-5 text-muted">
+    <i class="bi bi-person-x fs-1 d-block mb-2"></i>
+    No doctors found in this department.
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

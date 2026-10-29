@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Invoice Receipt: {{ invoice.invoice_no }}{% endblock %}
+
+{% block content %}
+<div class="page-header btn-no-print">
+  <div>
+    <h1 class="page-title">Invoice Receipt #{{ invoice.invoice_no }}</h1>
+    <p class="page-subtitle">Patient: {{ invoice.patient.name }} &bull; Print-ready official hospital invoice</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn-primary-custom">
+      <i class="bi bi-printer"></i> Print Invoice / Receipt
+    </button>
+    <a href="{{ url_for('billing.invoice_detail', invoice_id=invoice.id) }}" class="btn-outline-custom">
+      <i class="bi bi-arrow-left"></i> Back to Invoice
+    </a>
+  </div>
+</div>
+
+<div class="card-box" style="max-width: 850px; margin: 0 auto;">
+  <div class="card-body-custom p-5">
+    <!-- Header Letterhead -->
+    <div class="d-flex justify-content-between align-items-center pb-4 mb-4 border-bottom">
+      <div class="d-flex align-items-center gap-3">
+        <div class="brand-icon-box" style="width: 48px; height: 48px; font-size: 24px;">
+          <i class="bi bi-hospital"></i>
+        </div>
+        <div>
+          <h4 class="fw-bold mb-0 text-dark">CarePulse Hospital & Medical Centers</h4>
+          <span class="text-muted small">Financial & Patient Accounts Department &bull; Tax ID: 88-9941029</span>
+        </div>
+      </div>
+      <div class="text-end">
+        <h4 class="fw-bold font-monospace text-primary mb-0">{{ invoice.invoice_no }}</h4>
+        <div class="text-muted fs-8 mt-1">Date: {{ invoice.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+      </div>
+    </div>
+
+    <!-- Bill To / Metadata -->
+    <div class="row g-3 p-3 bg-light rounded-3 mb-4">
+      <div class="col-md-6 border-end">
+        <h6 class="fw-bold text-uppercase small text-muted mb-2">Billed To (Patient)</h6>
+        <div><strong>{{ invoice.patient.name }}</strong></div>
+        <div class="text-muted small">Patient ID: {{ invoice.patient.patient_no }}</div>
+        <div class="text-muted small">Phone: {{ invoice.patient.phone or 'N/A' }}</div>
+        <div class="text-muted small">Address: {{ invoice.patient.address or 'N/A' }}</div>
+      </div>
+      <div class="col-md-6 ps-md-4">
+        <h6 class="fw-bold text-uppercase small text-muted mb-2">Payment Details</h6>
+        <div>Invoice Status: <strong class="text-uppercase">{{ invoice.status }}</strong></div>
+        <div>Total Billed: <strong>${{ "{:,.2f}".format(invoice.total_amount) }}</strong></div>
+        <div>Total Paid: <strong class="text-success">${{ "{:,.2f}".format(invoice.paid_amount) }}</strong></div>
+        <div>Balance Due: <strong class="text-danger">${{ "{:,.2f}".format(invoice.balance_due) }}</strong></div>
+      </div>
+    </div>
+
+    <!-- Line items table -->
+    <div class="custom-table-responsive mb-4">
+      <table class="custom-table border">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Description</th>
+            <th>Type</th>
+            <th>Qty</th>
+            <th>Unit Rate</th>
+            <th>Total Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in invoice.items %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td class="fw-bold">{{ item.description }}</td>
+            <td>{{ item.item_type }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>${{ "{:,.2f}".format(item.unit_price) }}</td>
+            <td class="fw-bold">${{ "{:,.2f}".format(item.total_price) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Totals summary -->
+    <div class="d-flex justify-content-end mb-4">
+      <div style="width: 280px;" class="p-3 bg-light rounded-3">
+        <div class="d-flex justify-content-between mb-2">
+          <span>Total Billed:</span>
+          <strong>${{ "{:,.2f}".format(invoice.total_amount) }}</strong>
+        </div>
+        <div class="d-flex justify-content-between mb-2 text-success">
+          <span>Amount Paid:</span>
+          <strong>-${{ "{:,.2f}".format(invoice.paid_amount) }}</strong>
+        </div>
+        <div class="d-flex justify-content-between pt-2 border-top fs-6">
+          <span class="fw-bold">Balance Remaining:</span>
+          <strong class="text-danger font-monospace">${{ "{:,.2f}".format(invoice.balance_due) }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Note -->
+    <div class="d-flex justify-content-between align-items-end mt-5 pt-4 border-top">
+      <div class="text-muted fs-8">
+        <div>Thank you for choosing CarePulse Hospital.</div>
+        <div>For billing queries, contact: accounts@carepulse.hospital &bull; +1 555-0100</div>
+      </div>
+      <div class="text-center">
+        <div class="fw-bold">Marcus Stone</div>
+        <div class="text-muted small">Authorized Billing Officer</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

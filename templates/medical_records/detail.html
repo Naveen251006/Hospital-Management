@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Medical Record #{{ record.id }} - {{ record.patient.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header btn-no-print">
+  <div>
+    <h1 class="page-title">Clinical Consultation Summary</h1>
+    <p class="page-subtitle">Encounter #MR-{{ "%04d" % record.id }} &bull; Recorded on {{ record.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn-outline-custom">
+      <i class="bi bi-printer"></i> Print Medical Note
+    </button>
+    <a href="{{ url_for('patients.profile', patient_id=record.patient.id) }}" class="btn-outline-custom">
+      <i class="bi bi-person"></i> Patient Dossier
+    </a>
+  </div>
+</div>
+
+<div class="card-box" style="max-width: 900px; margin: 0 auto;">
+  <div class="card-body-custom p-5">
+    <!-- Header Hospital Letterhead -->
+    <div class="d-flex justify-content-between align-items-center pb-4 mb-4 border-bottom">
+      <div class="d-flex align-items-center gap-3">
+        <div class="brand-icon-box" style="width: 48px; height: 48px; font-size: 24px;">
+          <i class="bi bi-hospital"></i>
+        </div>
+        <div>
+          <h4 class="fw-bold mb-0 text-dark">CarePulse Hospital</h4>
+          <span class="text-muted small">Department of {{ record.doctor.department.department_name if record.doctor.department else 'General Clinical Medicine' }}</span>
+        </div>
+      </div>
+      <div class="text-end">
+        <span class="badge bg-primary-subtle text-primary font-monospace fs-6 px-3 py-1">MR-{{ "%04d" % record.id }}</span>
+        <div class="text-muted fs-8 mt-1">{{ record.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+      </div>
+    </div>
+
+    <!-- Patient & Doctor Metadata -->
+    <div class="row g-3 p-3 bg-light rounded-3 mb-4">
+      <div class="col-md-6 border-end">
+        <h6 class="fw-bold text-uppercase small text-muted mb-2">Patient Details</h6>
+        <div><strong>{{ record.patient.name }}</strong> ({{ record.patient.patient_no }})</div>
+        <div class="text-muted small">{{ record.patient.age }} Years / {{ record.patient.gender }} &bull; Blood: {{ record.patient.blood_group or 'N/A' }}</div>
+        <div class="text-muted small">Phone: {{ record.patient.phone or 'N/A' }}</div>
+      </div>
+      <div class="col-md-6 ps-md-4">
+        <h6 class="fw-bold text-uppercase small text-muted mb-2">Attending Clinician</h6>
+        <div><strong>{{ record.doctor.name }}</strong></div>
+        <div class="text-muted small">{{ record.doctor.specialization }} ({{ record.doctor.qualification or 'MD' }})</div>
+        <div class="text-muted small">Room: {{ record.doctor.room_no or 'Suite A' }}</div>
+      </div>
+    </div>
+
+    <!-- Vital Signs Grid -->
+    <div class="mb-4">
+      <h6 class="fw-bold text-uppercase text-muted small mb-2">Vital Signs Assessment</h6>
+      <div class="row g-2 text-center font-monospace">
+        <div class="col-3">
+          <div class="p-2 border rounded bg-white">
+            <span class="text-muted fs-8 d-block">Blood Pressure</span>
+            <span class="fw-bold text-primary">{{ record.bp or '—' }}</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="p-2 border rounded bg-white">
+            <span class="text-muted fs-8 d-block">Pulse Rate</span>
+            <span class="fw-bold text-success">{{ record.pulse or '—' }} bpm</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="p-2 border rounded bg-white">
+            <span class="text-muted fs-8 d-block">Temperature</span>
+            <span class="fw-bold text-warning">{{ record.temperature or '—' }} °F</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="p-2 border rounded bg-white">
+            <span class="text-muted fs-8 d-block">Oxygen SpO2</span>
+            <span class="fw-bold text-info">{{ record.spo2 or '—' }} %</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diagnosis & Symptoms -->
+    <div class="mb-4">
+      <h6 class="fw-bold text-uppercase text-muted small mb-2">Primary Diagnosis</h6>
+      <div class="p-3 bg-primary-subtle text-primary rounded-3 fw-bold fs-6">
+        {{ record.diagnosis }}
+      </div>
+    </div>
+
+    {% if record.symptoms %}
+    <div class="mb-4">
+      <h6 class="fw-bold text-uppercase text-muted small mb-1">Presenting Symptoms</h6>
+      <p class="text-dark">{{ record.symptoms }}</p>
+    </div>
+    {% endif %}
+
+    {% if record.treatment_notes %}
+    <div class="mb-4">
+      <h6 class="fw-bold text-uppercase text-muted small mb-1">Clinical Assessment & Treatment Notes</h6>
+      <div class="p-3 border rounded-3 bg-white" style="white-space: pre-wrap;">{{ record.treatment_notes }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Prescriptions Section -->
+    {% if record.prescriptions.count() > 0 %}
+    <div class="mt-4 pt-3 border-top">
+      <h5 class="fw-bold text-dark mb-3"><i class="bi bi-capsule text-primary"></i> Attached Prescription (Rx)</h5>
+      {% for rx in record.prescriptions %}
+      <div class="custom-table-responsive mb-3">
+        <table class="custom-table border">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Medication Name</th>
+              <th>Dosage</th>
+              <th>Frequency</th>
+              <th>Duration</th>
+              <th>Instructions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for itm in rx.items %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td class="fw-bold">{{ itm.medicine_name }}</td>
+              <td>{{ itm.dosage }}</td>
+              <td>{{ itm.frequency }}</td>
+              <td>{{ itm.duration }}</td>
+              <td class="text-muted">{{ itm.instructions or 'As directed' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if rx.notes %}
+        <div class="p-2 bg-light rounded small text-muted"><strong>Prescription Notes:</strong> {{ rx.notes }}</div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Signature Block -->
+    <div class="d-flex justify-content-between align-items-end mt-5 pt-5 border-top">
+      <div class="text-muted fs-8">Generated by CarePulse HMS Clinical Records Subsystem</div>
+      <div class="text-center">
+        <div class="fw-bold">{{ record.doctor.name }}</div>
+        <div class="text-muted small">Licensed Attending Physician</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

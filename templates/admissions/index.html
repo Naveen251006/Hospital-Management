@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Inpatient Admissions & Ward Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Inpatient Admissions</h1>
+    <p class="page-subtitle">Manage hospital admissions, bed occupancy, ward transfers, and clinical discharges</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admissions.beds') }}" class="btn-outline-custom">
+      <i class="bi bi-hospital"></i> Live Bed Matrix
+    </a>
+    <a href="{{ url_for('admissions.admit') }}" class="btn-primary-custom">
+      <i class="bi bi-door-open-fill"></i> Admit New Patient
+    </a>
+  </div>
+</div>
+
+<!-- Tabs filter -->
+<div class="d-flex gap-2 mb-4">
+  <a href="{{ url_for('admissions.index', status='Admitted') }}" class="btn btn-sm {% if current_status == 'Admitted' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    Currently Admitted
+  </a>
+  <a href="{{ url_for('admissions.index', status='Discharged') }}" class="btn btn-sm {% if current_status == 'Discharged' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    Discharge History
+  </a>
+  <a href="{{ url_for('admissions.index', status='all') }}" class="btn btn-sm {% if current_status == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    All Records
+  </a>
+</div>
+
+<div class="card-box">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-door-open text-primary"></i> Admissions Register ({{ admissions|length }})</h3>
+  </div>
+  <div class="custom-table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Admission ID</th>
+          <th>Patient</th>
+          <th>Ward & Bed</th>
+          <th>Attending Doctor</th>
+          <th>Admitted Date</th>
+          <th>Discharge Date</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for adm in admissions %}
+        <tr>
+          <td class="font-monospace fw-bold text-muted">#ADM-{{ "%04d" % adm.id }}</td>
+          <td>
+            <a href="{{ url_for('patients.profile', patient_id=adm.patient.id) }}" class="fw-bold text-dark text-decoration-none">
+              {{ adm.patient.name }}
+            </a>
+            <div class="text-muted fs-8">{{ adm.patient.patient_no }}</div>
+          </td>
+          <td>
+            <span class="badge bg-light text-dark fw-bold border">
+              {{ adm.bed.ward.ward_name }} - {{ adm.bed.bed_number }}
+            </span>
+          </td>
+          <td>{{ adm.doctor.name }}</td>
+          <td>{{ adm.admission_date.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>
+            {% if adm.discharge_date %}
+              {{ adm.discharge_date.strftime('%Y-%m-%d %H:%M') }}
+            {% else %}
+              <span class="badge bg-success-subtle text-success">Active Inpatient</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="text-truncate d-inline-block" style="max-width: 180px;" title="{{ adm.reason }}">
+              {{ adm.reason or 'Observation' }}
+            </span>
+          </td>
+          <td>
+            <span class="badge-custom badge-{{ adm.status.lower() }}">{{ adm.status }}</span>
+          </td>
+          <td>
+            {% if adm.status == 'Admitted' %}
+              <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#dischargeModal{{ adm.id }}">
+                <i class="bi bi-box-arrow-right"></i> Discharge
+              </button>
+
+              <!-- Discharge Modal -->
+              <div class="modal fade" id="dischargeModal{{ adm.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                  <div class="modal-content border-0 shadow">
+                    <div class="modal-header">
+                      <h5 class="modal-title fw-bold">Discharge Patient: {{ adm.patient.name }}</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="{{ url_for('admissions.discharge', admission_id=adm.id) }}">
+                      <div class="modal-body">
+                        <p class="small text-muted mb-3">
+                          Assigned Bed: <strong>{{ adm.bed.ward.ward_name }} ({{ adm.bed.bed_number }})</strong> &bull; Daily Rate: ${{ adm.bed.daily_rate }}
+                        </p>
+                        <div class="mb-3">
+                          <label class="form-label-custom">Clinical Discharge Summary</label>
+                          <textarea name="discharge_summary" rows="3" class="form-control-custom" placeholder="Condition upon discharge, discharge medications, follow-up advice..." required></textarea>
+                        </div>
+                        <div class="form-check p-3 bg-light rounded-3">
+                          <input class="form-check-input" type="checkbox" name="create_bill" value="1" id="createBillCheck{{ adm.id }}" checked>
+                          <label class="form-check-label fw-semibold small" for="createBillCheck{{ adm.id }}">
+                            Automatically generate inpatient bed care invoice
+                          </label>
+                          <div class="text-muted fs-8">Calculates days stayed times bed daily rate.</div>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn-outline-custom" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Confirm Discharge & Release Bed</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            {% else %}
+              <span class="text-muted small">Discharged</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" class="text-center py-5 text-muted">
+            <i class="bi bi-door-closed fs-1 d-block mb-2"></i>
+            No admission records found under this filter.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

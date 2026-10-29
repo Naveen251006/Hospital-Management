@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Hospital Analytics & Reports{% endblock %}
+
+{% block content %}
+<div class="page-header btn-no-print">
+  <div>
+    <h1 class="page-title">Executive Analytics & Clinical Reports</h1>
+    <p class="page-subtitle">Hospital operational metrics, revenue collection breakdowns, and inpatient capacity</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn-primary-custom">
+      <i class="bi bi-printer"></i> Print Executive Report
+    </button>
+  </div>
+</div>
+
+<!-- High Level Metrics -->
+<div class="stats-grid mb-4">
+  <div class="stat-card blue">
+    <div>
+      <div class="stat-label">Total Patients</div>
+      <div class="stat-value">{{ total_patients }}</div>
+      <div class="stat-subtext text-muted">Cumulative registrations</div>
+    </div>
+    <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
+  </div>
+
+  <div class="stat-card green">
+    <div>
+      <div class="stat-label">Total Gross Revenue</div>
+      <div class="stat-value">${{ "{:,.2f}".format(total_revenue) }}</div>
+      <div class="stat-subtext text-muted">Cleared patient payments</div>
+    </div>
+    <div class="stat-icon green"><i class="bi bi-cash-stack"></i></div>
+  </div>
+
+  <div class="stat-card purple">
+    <div>
+      <div class="stat-label">Total Appointments</div>
+      <div class="stat-value">{{ total_appointments }}</div>
+      <div class="stat-subtext text-muted">Clinical consultations</div>
+    </div>
+    <div class="stat-icon purple"><i class="bi bi-calendar2-check-fill"></i></div>
+  </div>
+
+  <div class="stat-card amber">
+    <div>
+      <div class="stat-label">Pharmacy Formulary Value</div>
+      <div class="stat-value">${{ "{:,.2f}".format(pharmacy_value) }}</div>
+      <div class="stat-subtext text-muted">Total inventory valuation</div>
+    </div>
+    <div class="stat-icon amber"><i class="bi bi-capsule"></i></div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Revenue Breakdown by Payment Method -->
+  <div class="col-lg-6">
+    <div class="card-box h-100 mb-0">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom"><i class="bi bi-credit-card text-success"></i> Revenue by Payment Method</h3>
+      </div>
+      <div class="card-body-custom">
+        <div class="custom-table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Payment Method</th>
+                <th>Revenue Collected</th>
+                <th>Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in method_data %}
+              <tr>
+                <td class="fw-bold"><span class="badge bg-light text-dark border px-2 py-1">{{ m.method }}</span></td>
+                <td class="fw-bold text-success">${{ "{:,.2f}".format(m.amount) }}</td>
+                <td>
+                  {% set pct = (m.amount / total_revenue * 100) if total_revenue > 0 else 0 %}
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="progress flex-grow-1" style="height: 6px;">
+                      <div class="progress-bar bg-success" style="width: {{ pct }}%;"></div>
+                    </div>
+                    <span class="small text-muted">{{ "{:.1f}".format(pct) }}%</span>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="3" class="text-muted text-center py-3">No payments recorded.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Appointment Distribution -->
+  <div class="col-lg-6">
+    <div class="card-box h-100 mb-0">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom"><i class="bi bi-pie-chart text-primary"></i> Appointment Status Breakdown</h3>
+      </div>
+      <div class="card-body-custom">
+        <div class="custom-table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Count</th>
+                <th>Ratio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in status_data %}
+              <tr>
+                <td><span class="badge-custom badge-{{ s.status.lower() }}">{{ s.status }}</span></td>
+                <td class="fw-bold">{{ s.count }}</td>
+                <td>
+                  {% set s_pct = (s.count / total_appointments * 100) if total_appointments > 0 else 0 %}
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="progress flex-grow-1" style="height: 6px;">
+                      <div class="progress-bar bg-primary" style="width: {{ s_pct }}%;"></div>
+                    </div>
+                    <span class="small text-muted">{{ "{:.1f}".format(s_pct) }}%</span>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ward Bed Occupancy Table -->
+<div class="card-box mb-4">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-hospital text-purple" style="color: #7c3aed;"></i> Ward Capacity & Bed Utilization</h3>
+  </div>
+  <div class="custom-table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Ward Name</th>
+          <th>Ward Type</th>
+          <th>Total Beds</th>
+          <th>Occupied Beds</th>
+          <th>Available Beds</th>
+          <th>Occupancy Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in ward_occupancy %}
+        <tr>
+          <td class="fw-bold">{{ w.ward }}</td>
+          <td><span class="badge bg-light text-secondary border">{{ w.type }}</span></td>
+          <td>{{ w.total }}</td>
+          <td><span class="text-danger fw-bold">{{ w.occupied }}</span></td>
+          <td><span class="text-success fw-bold">{{ w.total - w.occupied }}</span></td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height: 8px;">
+                <div class="progress-bar {% if w.rate > 80 %}bg-danger{% elif w.rate > 50 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ w.rate }}%;"></div>
+              </div>
+              <span class="fw-bold small">{{ w.rate }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

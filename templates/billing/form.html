@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Generate Patient Invoice{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Generate Itemized Hospital Invoice</h1>
+    <p class="page-subtitle">Add itemized line items for consultations, investigations, surgical procedures, pharmacy, and wards</p>
+  </div>
+  <a href="{{ url_for('billing.index') }}" class="btn-outline-custom">
+    <i class="bi bi-arrow-left"></i> Back to Invoices
+  </a>
+</div>
+
+<form method="POST">
+  <div class="card-box mb-4">
+    <div class="card-header-custom">
+      <h3 class="card-title-custom"><i class="bi bi-receipt text-primary"></i> Patient Bill Information</h3>
+    </div>
+    <div class="card-body-custom">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label-custom">Select Patient *</label>
+          <select name="patient_id" class="form-select-custom" required>
+            <option value="">Choose Patient...</option>
+            {% for p in patients %}
+              <option value="{{ p.id }}" {% if preselected_patient_id == p.id %}selected{% endif %}>
+                {{ p.name }} ({{ p.patient_no }}) - {{ p.phone or '' }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-box mb-4">
+    <div class="card-header-custom">
+      <h3 class="card-title-custom"><i class="bi bi-list-check text-primary"></i> Billable Items</h3>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="add-invoice-row-btn">
+        <i class="bi bi-plus-circle"></i> Add Item Row
+      </button>
+    </div>
+    <div class="card-body-custom">
+      <div id="invoice-items-container">
+        <!-- Item Row Template -->
+        <div class="invoice-item-row p-3 bg-light rounded-3 mb-3 border">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+              <label class="form-label-custom small">Item Description</label>
+              <input type="text" name="item_description[]" class="form-control-custom form-control-sm" placeholder="e.g. Cardiology Consultation Fee" required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label-custom small">Category</label>
+              <select name="item_type[]" class="form-select-custom form-select-sm">
+                <option value="Consultation">Consultation</option>
+                <option value="Lab">Lab Test</option>
+                <option value="Pharmacy">Pharmacy</option>
+                <option value="Ward">Bed / Ward Care</option>
+                <option value="Procedure">Procedure / Surgery</option>
+                <option value="Other">Other Service</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label-custom small">Quantity</label>
+              <input type="number" name="item_qty[]" class="form-control-custom form-control-sm item-qty" value="1" min="1" required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label-custom small">Unit Price ($)</label>
+              <input type="number" step="0.01" name="item_price[]" class="form-control-custom form-control-sm item-price" value="50.00" min="0" required>
+            </div>
+            <div class="col-md-1 text-center">
+              <label class="form-label-custom small">Total</label>
+              <div class="fw-bold text-dark item-row-total">$50.00</div>
+            </div>
+            <div class="col-md-1 text-end">
+              <button type="button" class="btn btn-sm btn-outline-danger remove-invoice-row-btn" title="Remove">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grand Total Bar -->
+      <div class="d-flex justify-content-end align-items-center gap-3 pt-3 mt-3 border-top">
+        <span class="fs-5 text-muted fw-bold">Grand Total:</span>
+        <span class="fs-3 fw-bold text-primary font-monospace" id="invoice-grand-total">$50.00</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2">
+    <a href="{{ url_for('billing.index') }}" class="btn-outline-custom">Cancel</a>
+    <button type="submit" class="btn-primary-custom">
+      <i class="bi bi-check2-circle"></i> Generate & Issue Invoice
+    </button>
+  </div>
+</form>
+{% endblock %}

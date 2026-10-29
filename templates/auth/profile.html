@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">User Profile</h1>
+    <p class="page-subtitle">Manage your personal credentials and workstation preferences</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-6">
+    <div class="card-box">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom"><i class="bi bi-person-gear text-primary"></i> Personal Information</h3>
+      </div>
+      <div class="card-body-custom">
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label-custom">Workstation Username</label>
+            <input type="text" class="form-control-custom bg-light" value="{{ current_user.username }}" readonly disabled>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-custom">Assigned System Role</label>
+            <input type="text" class="form-control-custom bg-light" value="{{ current_user.role|title }}" readonly disabled>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-custom">Full Name</label>
+            <input type="text" name="full_name" class="form-control-custom" value="{{ current_user.full_name }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label-custom">Official Email</label>
+            <input type="email" name="email" class="form-control-custom" value="{{ current_user.email or '' }}">
+          </div>
+
+          <hr class="my-4">
+          <h5 class="fw-bold mb-3"><i class="bi bi-shield-lock text-warning"></i> Change Password</h5>
+          <div class="mb-3">
+            <label class="form-label-custom">Current Password</label>
+            <input type="password" name="current_password" class="form-control-custom" placeholder="••••••••">
+          </div>
+          <div class="mb-3">
+            <label class="form-label-custom">New Password</label>
+            <input type="password" name="new_password" class="form-control-custom" placeholder="Leave blank to keep unchanged">
+          </div>
+
+          <button type="submit" class="btn-primary-custom mt-2">
+            <i class="bi bi-check2"></i> Save Changes
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card-box">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom"><i class="bi bi-info-circle text-info"></i> Account Status & Permissions</h3>
+      </div>
+      <div class="card-body-custom">
+        <div class="p-3 rounded bg-light mb-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted small">Account ID:</span>
+            <span class="fw-bold">#{{ current_user.id }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted small">Account Status:</span>
+            <span class="badge-custom badge-available">Active</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted small">Created:</span>
+            <span class="fw-semibold">{{ current_user.created_at.strftime('%b %d, %Y') }}</span>
+          </div>
+        </div>
+
+        <h6 class="fw-bold small text-muted text-uppercase mb-2">Security Guidelines</h6>
+        <ul class="text-muted small ps-3">
+          <li>Medical records are confidential and subject to regulatory audit.</li>
+          <li>Always lock or logout from workstation terminals when unattended.</li>
+          <li>Every prescription, lab result, and billing entry is tracked in the system audit trail.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Laboratory Diagnostics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Diagnostic Laboratory & Pathology</h1>
+    <p class="page-subtitle">Hematology, biochemistry, radiology requests, test results, and analytical reports</p>
+  </div>
+  <a href="{{ url_for('laboratory.order') }}" class="btn-primary-custom">
+    <i class="bi bi-plus-circle"></i> Order New Lab Test
+  </a>
+</div>
+
+<!-- Status Filters -->
+<div class="d-flex gap-2 mb-4">
+  <a href="{{ url_for('laboratory.index') }}" class="btn btn-sm {% if not current_status %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    All Orders
+  </a>
+  <a href="{{ url_for('laboratory.index', status='Pending') }}" class="btn btn-sm {% if current_status == 'Pending' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    Pending Sample
+  </a>
+  <a href="{{ url_for('laboratory.index', status='Completed') }}" class="btn btn-sm {% if current_status == 'Completed' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    Completed & Reported
+  </a>
+</div>
+
+<div class="card-box">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-virus2 text-primary"></i> Laboratory Orders ({{ orders|length }})</h3>
+  </div>
+  <div class="custom-table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Ordered Date</th>
+          <th>Patient</th>
+          <th>Referring Doctor</th>
+          <th>Test Name & Category</th>
+          <th>Status</th>
+          <th>Result Flag</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr>
+          <td class="font-monospace fw-bold text-muted">#LAB-{{ "%04d" % order.id }}</td>
+          <td>{{ order.ordered_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>
+            <a href="{{ url_for('patients.profile', patient_id=order.patient.id) }}" class="fw-bold text-dark text-decoration-none">
+              {{ order.patient.name }}
+            </a>
+            <div class="text-muted fs-8">{{ order.patient.patient_no }}</div>
+          </td>
+          <td>{{ order.doctor.name }}</td>
+          <td>
+            <div class="fw-bold text-dark">{{ order.test_name }}</div>
+            <span class="badge bg-light text-secondary border fs-8">{{ order.test_category }}</span>
+          </td>
+          <td>
+            <span class="badge-custom badge-{{ order.status.lower() }}">{{ order.status }}</span>
+          </td>
+          <td>
+            {% if order.result %}
+              {% if order.result.flag == 'Normal' %}
+                <span class="badge-custom badge-normal"><i class="bi bi-check-circle"></i> Normal</span>
+              {% elif order.result.flag == 'Critical' %}
+                <span class="badge-custom badge-critical"><i class="bi bi-exclamation-triangle-fill"></i> Critical</span>
+              {% else %}
+                <span class="badge-custom badge-warning"><i class="bi bi-info-circle"></i> Abnormal</span>
+              {% endif %}
+            {% else %}
+              <span class="text-muted small">Awaiting Analysis</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              {% if order.status != 'Completed' or current_user.has_role('admin', 'lab_tech') %}
+                <a href="{{ url_for('laboratory.enter_results', order_id=order.id) }}" class="btn btn-sm btn-outline-primary" title="Enter Findings">
+                  <i class="bi bi-pencil-square"></i> {% if order.result %}Edit{% else %}Enter Results{% endif %}
+                </a>
+              {% endif %}
+              {% if order.result %}
+                <a href="{{ url_for('laboratory.view_report', order_id=order.id) }}" class="btn btn-sm btn-primary" title="View Lab Report">
+                  <i class="bi bi-file-earmark-text"></i> Report
+                </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center py-5 text-muted">
+            <i class="bi bi-virus fs-1 d-block mb-2"></i>
+            No laboratory orders found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

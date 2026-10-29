@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Patient Management</title>
+</head>
+<body>
+    <h1>Patient Registration</h1>
+
+    <form method="POST">
+        <label>Patient Name</label>
+        <input name="name" required maxlength="120">
+        <br><br>
+
+        <label>Phone</label>
+        <input name="phone" maxlength="20">
+        <br><br>
+
+        <label>Address</label>
+        <input name="address" maxlength="255">
+        <br><br>
+
+        <button type="submit">Register Patient</button>
+    </form>
+
+    <h2>Registered Patients</h2>
+
+    <table border="1" cellpadding="8">
+        <tr>
+            <th>Patient ID</th>
+            <th>Name</th>
+            <th>Phone</th>
+        </tr>
+        {% for patient in patients %}
+        <tr>
+            <td>{{ patient.patient_no }}</td>
+            <td>{{ patient.name }}</td>
+            <td>{{ patient.phone or "-" }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="3">No patients registered yet.</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <p><a href="{{ url_for('dashboard') }}">Back to Dashboard</a></p>
+</body>
+</html>

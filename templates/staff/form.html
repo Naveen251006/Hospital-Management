@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{% if staff %}Edit Staff Member{% else %}Add Staff Member{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% if staff %}Edit Staff: {{ staff.name }}{% else %}Register Hospital Staff Member{% endif %}</h1>
+    <p class="page-subtitle">Configure employee department, job designation, shift schedule, and access credentials</p>
+  </div>
+  <a href="{{ url_for('staff.index') }}" class="btn-outline-custom">
+    <i class="bi bi-arrow-left"></i> Back to Directory
+  </a>
+</div>
+
+<div class="card-box" style="max-width: 800px;">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-person-badge text-primary"></i> Staff Profile & Roles</h3>
+  </div>
+  <div class="card-body-custom">
+    <form method="POST">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label-custom">Full Employee Name *</label>
+          <input type="text" name="full_name" class="form-control-custom" value="{{ staff.name if staff else '' }}" required placeholder="e.g. Rachel Green, RN">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Email Address</label>
+          <input type="email" name="email" class="form-control-custom" value="{{ staff.user.email if staff and staff.user else '' }}" placeholder="staff@hospital.com">
+        </div>
+
+        {% if not staff %}
+        <div class="col-md-6">
+          <label class="form-label-custom">Workstation Username *</label>
+          <input type="text" name="username" class="form-control-custom" required placeholder="e.g. rgreen">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Initial Password *</label>
+          <input type="password" name="password" class="form-control-custom" required placeholder="••••••••">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">System Role *</label>
+          <select name="role" class="form-select-custom" required>
+            <option value="nurse">Nurse</option>
+            <option value="receptionist">Receptionist</option>
+            <option value="pharmacist">Pharmacist</option>
+            <option value="lab_tech">Lab Technologist</option>
+            <option value="billing">Billing Officer</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+        {% endif %}
+
+        <div class="col-md-6">
+          <label class="form-label-custom">Department</label>
+          <select name="department_id" class="form-select-custom">
+            <option value="">General Administration</option>
+            {% for d in departments %}
+              <option value="{{ d.id }}" {% if staff and staff.department_id == d.id %}selected{% endif %}>{{ d.department_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label-custom">Job Title / Designation *</label>
+          <input type="text" name="job_title" class="form-control-custom" value="{{ staff.job_title if staff else '' }}" required placeholder="e.g. Head Charge Nurse">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Contact Phone</label>
+          <input type="tel" name="phone" class="form-control-custom" value="{{ staff.phone if staff else '' }}" placeholder="+1 555-0192">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label-custom">Assigned Shift</label>
+          <select name="shift" class="form-select-custom">
+            {% for sh in ['Morning', 'Evening', 'Night', 'Rotating'] %}
+              <option value="{{ sh }}" {% if staff and staff.shift == sh %}selected{% endif %}>{{ sh }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label-custom">Monthly Compensation ($)</label>
+          <input type="number" step="0.01" name="salary" class="form-control-custom" value="{{ staff.salary if staff else '3200.00' }}">
+        </div>
+
+        {% if staff %}
+        <div class="col-md-4">
+          <label class="form-label-custom">Employment Status</label>
+          <select name="status" class="form-select-custom">
+            <option value="Active" {% if staff.status == 'Active' %}selected{% endif %}>Active</option>
+            <option value="On Leave" {% if staff.status == 'On Leave' %}selected{% endif %}>On Leave</option>
+            <option value="Inactive" {% if staff.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+          </select>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+        <a href="{{ url_for('staff.index') }}" class="btn-outline-custom">Cancel</a>
+        <button type="submit" class="btn-primary-custom">
+          <i class="bi bi-check2-circle"></i> {% if staff %}Save Staff Changes{% else %}Register Employee{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

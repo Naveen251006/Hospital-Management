@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{% if doctor %}Edit Doctor Profile{% else %}Add Doctor{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% if doctor %}Edit Doctor: {{ doctor.name }}{% else %}Register Specialist Doctor{% endif %}</h1>
+    <p class="page-subtitle">Configure doctor credentials, clinical specialization, fees, and consultation schedules</p>
+  </div>
+  <a href="{{ url_for('doctors.index') }}" class="btn-outline-custom">
+    <i class="bi bi-arrow-left"></i> Back to Doctors
+  </a>
+</div>
+
+<div class="card-box" style="max-width: 860px;">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-heart-pulse-fill text-primary"></i> Doctor Profile & Workstation Details</h3>
+  </div>
+  <div class="card-body-custom">
+    <form method="POST">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label-custom">Full Name (with Title) *</label>
+          <input type="text" name="full_name" class="form-control-custom" value="{{ doctor.name if doctor else '' }}" required placeholder="e.g. Dr. Eleanor Gray, MD">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Official Email</label>
+          <input type="email" name="email" class="form-control-custom" value="{{ doctor.user.email if doctor and doctor.user else '' }}" placeholder="doctor@hospital.com">
+        </div>
+
+        {% if not doctor %}
+        <div class="col-md-6">
+          <label class="form-label-custom">Workstation Username *</label>
+          <input type="text" name="username" class="form-control-custom" required placeholder="e.g. dr.gray">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Initial Password *</label>
+          <input type="password" name="password" class="form-control-custom" required placeholder="Initial password">
+        </div>
+        {% endif %}
+
+        <div class="col-md-6">
+          <label class="form-label-custom">Department</label>
+          <select name="department_id" class="form-select-custom">
+            <option value="">Select Department</option>
+            {% for d in departments %}
+              <option value="{{ d.id }}" {% if doctor and doctor.department_id == d.id %}selected{% endif %}>{{ d.department_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Specialization *</label>
+          <input type="text" name="specialization" class="form-control-custom" value="{{ doctor.specialization if doctor else '' }}" required placeholder="e.g. Cardiologist, Neurologist">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label-custom">Qualifications</label>
+          <input type="text" name="qualification" class="form-control-custom" value="{{ doctor.qualification if doctor else '' }}" placeholder="e.g. MBBS, MD, FACC">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label-custom">Medical License No</label>
+          <input type="text" name="license_no" class="form-control-custom" value="{{ doctor.license_no if doctor else '' }}" placeholder="MED-XX-12345">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label-custom">Consultation Fee ($) *</label>
+          <input type="number" step="0.01" name="consultation_fee" class="form-control-custom" value="{{ doctor.consultation_fee if doctor else '80.00' }}" required>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label-custom">Consultation Room / Suite</label>
+          <input type="text" name="room_no" class="form-control-custom" value="{{ doctor.room_no if doctor else '' }}" placeholder="e.g. Suite 204">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label-custom">Available Days</label>
+          <input type="text" name="available_days" class="form-control-custom" value="{{ doctor.available_days if doctor else 'Mon to Fri' }}" placeholder="e.g. Mon, Wed, Fri">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label-custom">Available Hours</label>
+          <input type="text" name="available_time" class="form-control-custom" value="{{ doctor.available_time if doctor else '09:00 AM - 05:00 PM' }}" placeholder="e.g. 09:00 AM - 05:00 PM">
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+        <a href="{{ url_for('doctors.index') }}" class="btn-outline-custom">Cancel</a>
+        <button type="submit" class="btn-primary-custom">
+          <i class="bi bi-check2"></i> {% if doctor %}Save Changes{% else %}Register Doctor{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Hospital Staff Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Hospital Staff & Personnel Directory</h1>
+    <p class="page-subtitle">Manage nursing personnel, reception officers, technicians, shifts, and departmental assignments</p>
+  </div>
+  {% if current_user.has_role('admin') %}
+  <a href="{{ url_for('staff.create') }}" class="btn-primary-custom">
+    <i class="bi bi-person-plus-fill"></i> Add Staff Member
+  </a>
+  {% endif %}
+</div>
+
+<div class="card-box">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-person-badge text-primary"></i> Active Hospital Personnel ({{ staff_members|length }})</h3>
+  </div>
+  <div class="custom-table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Employee Name</th>
+          <th>Job Title</th>
+          <th>Department</th>
+          <th>Shift</th>
+          <th>Phone</th>
+          <th>Workstation User</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for st in staff_members %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="user-avatar-circle" style="width: 36px; height: 36px; font-size: 0.8rem; background: linear-gradient(135deg, #10b981, #059669);">
+                {{ st.name[:2].upper() }}
+              </div>
+              <div class="fw-bold text-dark">{{ st.name }}</div>
+            </div>
+          </td>
+          <td><span class="fw-semibold">{{ st.job_title }}</span></td>
+          <td>{{ st.department.department_name if st.department else 'General Administration' }}</td>
+          <td>
+            <span class="badge bg-light text-dark border">
+              <i class="bi bi-sun me-1"></i> {{ st.shift }} Shift
+            </span>
+          </td>
+          <td>{{ st.phone or '—' }}</td>
+          <td><span class="font-monospace text-muted small">@{{ st.user.username if st.user else '-' }}</span></td>
+          <td>
+            <span class="badge-custom badge-available">{{ st.status }}</span>
+          </td>
+          <td>
+            {% if current_user.has_role('admin') %}
+            <a href="{{ url_for('staff.edit', staff_id=st.id) }}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i> Edit
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center py-5 text-muted">
+            <i class="bi bi-people fs-1 d-block mb-2"></i>
+            No staff records found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

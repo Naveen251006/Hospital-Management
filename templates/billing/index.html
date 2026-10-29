@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Billing & Hospital Invoices{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Patient Billing & Revenue</h1>
+    <p class="page-subtitle">Itemized invoices, insurance claims, payment transactions, and balance settlement</p>
+  </div>
+  <a href="{{ url_for('billing.create') }}" class="btn-primary-custom">
+    <i class="bi bi-receipt-cutoff"></i> Create New Invoice
+  </a>
+</div>
+
+<!-- Financial Summary Stats -->
+<div class="stats-grid mb-4">
+  <div class="stat-card blue">
+    <div>
+      <div class="stat-label">Total Billed</div>
+      <div class="stat-value">${{ "{:,.2f}".format(total_billed) }}</div>
+      <div class="stat-subtext text-muted">Gross inpatient & outpatient invoices</div>
+    </div>
+    <div class="stat-icon blue">
+      <i class="bi bi-receipt"></i>
+    </div>
+  </div>
+
+  <div class="stat-card green">
+    <div>
+      <div class="stat-label">Total Collected</div>
+      <div class="stat-value text-success">${{ "{:,.2f}".format(total_collected) }}</div>
+      <div class="stat-subtext text-muted">Settled via Cash, Card, Insurance, UPI</div>
+    </div>
+    <div class="stat-icon green">
+      <i class="bi bi-cash-stack"></i>
+    </div>
+  </div>
+
+  <div class="stat-card amber">
+    <div>
+      <div class="stat-label">Outstanding Balance</div>
+      <div class="stat-value text-warning">${{ "{:,.2f}".format(total_outstanding) }}</div>
+      <div class="stat-subtext text-muted">Pending patient accounts receivable</div>
+    </div>
+    <div class="stat-icon amber">
+      <i class="bi bi-clock-history"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Status Filters -->
+<div class="d-flex gap-2 mb-4">
+  <a href="{{ url_for('billing.index') }}" class="btn btn-sm {% if not current_status %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    All Invoices
+  </a>
+  <a href="{{ url_for('billing.index', status='Pending') }}" class="btn btn-sm {% if current_status == 'Pending' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    Unpaid Pending
+  </a>
+  <a href="{{ url_for('billing.index', status='Partially Paid') }}" class="btn btn-sm {% if current_status == 'Partially Paid' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    Partially Paid
+  </a>
+  <a href="{{ url_for('billing.index', status='Paid') }}" class="btn btn-sm {% if current_status == 'Paid' %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+    Paid in Full
+  </a>
+</div>
+
+<div class="card-box">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-file-earmark-spreadsheet text-primary"></i> Invoices Register ({{ invoices|length }})</h3>
+  </div>
+  <div class="custom-table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Invoice No</th>
+          <th>Issued Date</th>
+          <th>Patient</th>
+          <th>Total Amount</th>
+          <th>Amount Paid</th>
+          <th>Balance Due</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td>
+            <a href="{{ url_for('billing.invoice_detail', invoice_id=inv.id) }}" class="fw-bold font-monospace text-primary text-decoration-none">
+              {{ inv.invoice_no }}
+            </a>
+          </td>
+          <td>{{ inv.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+          <td>
+            <a href="{{ url_for('patients.profile', patient_id=inv.patient.id) }}" class="fw-bold text-dark text-decoration-none">
+              {{ inv.patient.name }}
+            </a>
+            <div class="text-muted fs-8">{{ inv.patient.patient_no }}</div>
+          </td>
+          <td class="fw-bold">${{ "{:,.2f}".format(inv.total_amount) }}</td>
+          <td class="text-success">${{ "{:,.2f}".format(inv.paid_amount) }}</td>
+          <td>
+            {% if inv.balance_due > 0 %}
+              <span class="text-danger fw-bold">${{ "{:,.2f}".format(inv.balance_due) }}</span>
+            {% else %}
+              <span class="text-muted">$0.00</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge-custom badge-{{ inv.status.lower().replace(' ', '-') }}">{{ inv.status }}</span>
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{{ url_for('billing.invoice_detail', invoice_id=inv.id) }}" class="btn btn-sm btn-outline-primary" title="View & Pay">
+                <i class="bi bi-eye"></i> View
+              </a>
+              <a href="{{ url_for('billing.print_receipt', invoice_id=inv.id) }}" class="btn btn-sm btn-outline-secondary" title="Print Receipt">
+                <i class="bi bi-printer"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center py-5 text-muted">
+            <i class="bi bi-receipt fs-1 d-block mb-2"></i>
+            No invoices found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

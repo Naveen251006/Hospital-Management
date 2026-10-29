@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Enter Lab Findings: {{ order.test_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Document Diagnostic Laboratory Findings</h1>
+    <p class="page-subtitle">Order #LAB-{{ "%04d" % order.id }} &bull; {{ order.test_name }} &bull; {{ order.patient.name }}</p>
+  </div>
+  <a href="{{ url_for('laboratory.index') }}" class="btn-outline-custom">
+    <i class="bi bi-arrow-left"></i> Back to Orders
+  </a>
+</div>
+
+<div class="card-box" style="max-width: 850px;">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-pencil-square text-primary"></i> Analytical Results Documentation</h3>
+  </div>
+  <div class="card-body-custom">
+    <div class="p-3 bg-light rounded-3 mb-4 small">
+      <div class="row g-2">
+        <div class="col-md-4"><strong>Patient:</strong> {{ order.patient.name }} ({{ order.patient.patient_no }})</div>
+        <div class="col-md-4"><strong>Doctor:</strong> {{ order.doctor.name }}</div>
+        <div class="col-md-4"><strong>Category:</strong> {{ order.test_category }}</div>
+      </div>
+    </div>
+
+    <form method="POST">
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label-custom">Diagnostic Reference Range</label>
+          <input type="text" name="reference_range" class="form-control-custom" value="{{ order.result.reference_range if order.result else '' }}" placeholder="e.g. 70 - 110 mg/dL or Negative">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label-custom">Clinical Result Flag *</label>
+          <select name="flag" class="form-select-custom" required>
+            <option value="Normal" {% if order.result and order.result.flag == 'Normal' %}selected{% endif %}>Normal (Within Limits)</option>
+            <option value="Abnormal" {% if order.result and order.result.flag == 'Abnormal' %}selected{% endif %}>Abnormal (Outside Limits)</option>
+            <option value="Critical" {% if order.result and order.result.flag == 'Critical' %}selected{% endif %}>Critical Alert (Urgent Attention)</option>
+          </select>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label-custom">Diagnostic Findings / Numerical Results *</label>
+          <textarea name="result_summary" rows="5" class="form-control-custom font-monospace" required placeholder="Enter quantitative values, morphological findings, or imaging interpretation...">{{ order.result.result_summary if order.result else '' }}</textarea>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label-custom">Technician Notes & Instrument Validation</label>
+          <textarea name="technician_notes" rows="2" class="form-control-custom" placeholder="Calibration details, sample quality remarks, duplicate runs...">{{ order.result.technician_notes if order.result else '' }}</textarea>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+        <a href="{{ url_for('laboratory.index') }}" class="btn-outline-custom">Cancel</a>
+        <button type="submit" class="btn-primary-custom">
+          <i class="bi bi-check2-circle"></i> Complete & Finalize Findings
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

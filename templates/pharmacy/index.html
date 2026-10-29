@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Pharmacy Inventory & Medication Stock{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Hospital Pharmacy & Formulary</h1>
+    <p class="page-subtitle">Track drug inventory batches, expiration dates, reorder thresholds, and dispensed items</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('pharmacy.dispense') }}" class="btn-outline-custom">
+      <i class="bi bi-box-arrow-up-right"></i> Dispense Medication
+    </a>
+    {% if current_user.has_role('admin', 'pharmacist') %}
+    <a href="{{ url_for('pharmacy.create') }}" class="btn-primary-custom">
+      <i class="bi bi-plus-circle"></i> Add New Medicine
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Alert Quick Filter Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <a href="{{ url_for('pharmacy.index') }}" class="text-decoration-none">
+      <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center {% if not current_alert %}border-primary shadow-sm{% endif %}">
+        <div>
+          <div class="text-muted small fw-bold">TOTAL FORMULARY</div>
+          <div class="fs-4 fw-bold text-dark">{{ medicines|length }} Medicines</div>
+        </div>
+        <i class="bi bi-capsule fs-2 text-primary"></i>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{{ url_for('pharmacy.index', alert='low_stock') }}" class="text-decoration-none">
+      <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center {% if current_alert == 'low_stock' %}border-warning shadow-sm{% endif %}">
+        <div>
+          <div class="text-warning-emphasis small fw-bold">LOW STOCK ALERTS</div>
+          <div class="fs-4 fw-bold text-warning-emphasis">{{ low_count }} Items Low</div>
+        </div>
+        <i class="bi bi-exclamation-triangle-fill fs-2 text-warning"></i>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{{ url_for('pharmacy.index', alert='expired') }}" class="text-decoration-none">
+      <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center {% if current_alert == 'expired' %}border-danger shadow-sm{% endif %}">
+        <div>
+          <div class="text-danger small fw-bold">EXPIRED BATCHES</div>
+          <div class="fs-4 fw-bold text-danger">{{ expired_count }} Expired</div>
+        </div>
+        <i class="bi bi-x-octagon-fill fs-2 text-danger"></i>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="card-box">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-capsule-pill text-primary"></i> Medication Inventory</h3>
+    <form method="GET" class="d-flex gap-2">
+      <input type="text" name="q" class="form-control-custom" placeholder="Search medication or batch..." value="{{ current_query }}">
+      <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+      {% if current_query or current_category or current_alert %}
+        <a href="{{ url_for('pharmacy.index') }}" class="btn btn-outline-secondary">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="custom-table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Medicine Name</th>
+          <th>Generic Name</th>
+          <th>Category</th>
+          <th>Batch No</th>
+          <th>Stock Remaining</th>
+          <th>Unit Price</th>
+          <th>Expiry Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for med in medicines %}
+        <tr>
+          <td>
+            <div class="fw-bold text-dark">{{ med.medicine_name }}</div>
+            <div class="text-muted fs-8">{{ med.manufacturer or 'Generic' }}</div>
+          </td>
+          <td>{{ med.generic_name or '—' }}</td>
+          <td><span class="badge bg-light text-secondary border">{{ med.category }}</span></td>
+          <td><span class="font-monospace fw-bold text-muted">{{ med.batch_no }}</span></td>
+          <td>
+            {% if med.quantity == 0 %}
+              <span class="badge-custom badge-danger">Out of Stock</span>
+            {% elif med.is_low_stock %}
+              <span class="badge-custom badge-warning">{{ med.quantity }} left (Low)</span>
+            {% else %}
+              <span class="badge-custom badge-available">{{ med.quantity }} in stock</span>
+            {% endif %}
+          </td>
+          <td class="fw-bold">${{ "{:,.2f}".format(med.unit_price) }}</td>
+          <td>
+            {% if med.is_expired %}
+              <span class="badge bg-danger-subtle text-danger fw-bold"><i class="bi bi-exclamation-triangle"></i> {{ med.expiry_date.strftime('%Y-%m-%d') }} (Expired)</span>
+            {% else %}
+              <span class="text-muted">{{ med.expiry_date.strftime('%Y-%m-%d') }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              {% if current_user.has_role('admin', 'pharmacist') %}
+                <a href="{{ url_for('pharmacy.edit', medicine_id=med.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit / Restock">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+              <a href="{{ url_for('pharmacy.dispense') }}?medicine_id={{ med.id }}" class="btn btn-sm btn-outline-primary" title="Dispense">
+                <i class="bi bi-box-arrow-up-right"></i> Dispense
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center py-5 text-muted">
+            <i class="bi bi-capsule fs-1 d-block mb-2"></i>
+            No medications found in pharmacy inventory.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

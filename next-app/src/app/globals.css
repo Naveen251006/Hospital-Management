@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-main: #f8fafc;
+    --card-surface: #ffffff;
+    --border-subtle: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --brand-primary: #7c3aed;
+    --brand-indigo: #6366f1;
+    --brand-hover: #6d28d9;
+    --brand-surface: #f5f3ff;
+  }
+
+  * {
+    border-color: #e2e8f0;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Custom luxury biotech scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #7c3aed;
+  }
+}
+
+/* Glassmorphism & Micro-elevations */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.glass-panel-dark {
+  background: rgba(15, 12, 35, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.clinical-shadow-sm {
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+}
+
+.clinical-shadow-md {
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+}
+
+.clinical-shadow-lg {
+  box-shadow: 0 12px 32px -4px rgba(124, 58, 237, 0.18), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+}
+
+/* Electric Violet & Royal Indigo Signature Gradient */
+.brand-btn-gradient {
+  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #4f46e5 100%);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brand-btn-gradient:hover {
+  background: linear-gradient(135deg, #6d28d9 0%, #4f46e5 50%, #4338ca 100%);
+  box-shadow: 0 6px 22px rgba(99, 102, 241, 0.45);
+  transform: translateY(-1px);
+}
+
+.brand-btn-gradient:active {
+  transform: translateY(0);
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.6); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+}
+
+.pulse-active {
+  animation: pulse-ring 2s infinite;
+}

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Audit Trail & Database Backup{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">System Audit Trail & Database Backup</h1>
+    <p class="page-subtitle">Module 14: Immutable activity logs, database backup generation, and disaster recovery restore</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('audit.download_backup') }}" class="btn-primary-custom">
+      <i class="bi bi-database-down"></i> Download Full Database Backup
+    </a>
+    <button class="btn-outline-custom" data-bs-toggle="modal" data-bs-target="#restoreModal">
+      <i class="bi bi-database-up"></i> Restore Database
+    </button>
+  </div>
+</div>
+
+<!-- Database Health & Backup Snapshot Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center">
+      <div>
+        <div class="text-muted small fw-bold">DATABASE</div>
+        <div class="fs-5 fw-bold text-dark">hospital_db</div>
+      </div>
+      <i class="bi bi-database-check fs-2 text-primary"></i>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center">
+      <div>
+        <div class="text-muted small fw-bold">PATIENT RECORDS</div>
+        <div class="fs-5 fw-bold text-success">{{ backup_summary.patients }} Active</div>
+      </div>
+      <i class="bi bi-people-fill fs-2 text-success"></i>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center">
+      <div>
+        <div class="text-muted small fw-bold">CLINICAL RECORDS</div>
+        <div class="fs-5 fw-bold text-purple" style="color: #7c3aed;">{{ backup_summary.records }} Notes</div>
+      </div>
+      <i class="bi bi-journal-medical fs-2 text-purple" style="color: #7c3aed;"></i>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center">
+      <div>
+        <div class="text-muted small fw-bold">TOTAL LOGGED EVENTS</div>
+        <div class="fs-5 fw-bold text-warning">{{ logs|length }} Logs</div>
+      </div>
+      <i class="bi bi-shield-check fs-2 text-warning"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card-box mb-4">
+  <div class="card-body-custom py-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <form method="GET" class="d-flex gap-2 align-items-center">
+        <label class="form-label-custom small mb-0 me-2">Filter Action:</label>
+        <select name="action" class="form-select-custom form-select-sm" style="max-width: 280px;" onchange="this.form.submit()">
+          <option value="">All Action Types</option>
+          {% for act in unique_actions %}
+            <option value="{{ act }}" {% if current_action == act %}selected{% endif %}>{{ act }}</option>
+          {% endfor %}
+        </select>
+        {% if current_action %}
+          <a href="{{ url_for('audit.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+        {% endif %}
+      </form>
+      <a href="{{ url_for('audit.export_logs') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-filetype-json"></i> Export Audit Logs (JSON)
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Audit Trail Table -->
+<div class="card-box">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-shield-check text-primary"></i> Activity Logs (Latest {{ logs|length }})</h3>
+  </div>
+  <div class="custom-table-responsive">
+    <table class="custom-table font-monospace">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Entity Type</th>
+          <th>Target ID</th>
+          <th>Event Details</th>
+          <th>Client IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="text-muted small">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td><span class="badge bg-light text-dark border">@{{ log.username }}</span></td>
+          <td><span class="badge bg-primary-subtle text-primary fw-bold">{{ log.action }}</span></td>
+          <td>{{ log.entity_type or '—' }}</td>
+          <td>{{ log.entity_id or '—' }}</td>
+          <td style="font-family: var(--font-main);" class="small text-dark">{{ log.details or '—' }}</td>
+          <td class="text-muted fs-8">{{ log.ip_address or '127.0.0.1' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center py-5 text-muted">No audit logs found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Restore Modal -->
+<div class="modal fade" id="restoreModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-database-up text-warning"></i> Restore Database Snapshot</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('audit.restore_backup') }}" enctype="multipart/form-data">
+        <div class="modal-body">
+          <p class="small text-muted mb-3">
+            Upload an authentic JSON database backup generated from the CarePulse HMS system.
+          </p>
+          <div class="mb-3">
+            <label class="form-label-custom">Select Backup File (.json)</label>
+            <input type="file" name="backup_file" class="form-control-custom" accept=".json" required>
+          </div>
+          <div class="alert alert-warning small border-0 mb-0">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            Existing matching patient and master records will be safely preserved.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-outline-custom" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning fw-bold">Restore & Merge Records</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Appointment Scheduling{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Appointment Master Schedule</h1>
+    <p class="page-subtitle">Manage outpatient consultations, avoid collisions, and track clinical statuses</p>
+  </div>
+  <a href="{{ url_for('appointments.book') }}" class="btn-primary-custom">
+    <i class="bi bi-calendar-plus"></i> Book New Appointment
+  </a>
+</div>
+
+<!-- Filters Bar -->
+<div class="card-box mb-4">
+  <div class="card-body-custom py-3">
+    <form method="GET" class="row g-2 align-items-center">
+      <div class="col-md-3">
+        <label class="form-label-custom small mb-1">Filter by Status</label>
+        <select name="status" class="form-select-custom form-select-sm" onchange="this.form.submit()">
+          <option value="">All Statuses</option>
+          <option value="Scheduled" {% if selected_status == 'Scheduled' %}selected{% endif %}>Scheduled</option>
+          <option value="In-Progress" {% if selected_status == 'In-Progress' %}selected{% endif %}>In-Progress</option>
+          <option value="Completed" {% if selected_status == 'Completed' %}selected{% endif %}>Completed</option>
+          <option value="Cancelled" {% if selected_status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label-custom small mb-1">Filter by Date</label>
+        <input type="date" name="date" class="form-control-custom form-control-sm" value="{{ selected_date }}" onchange="this.form.submit()">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label-custom small mb-1">Filter by Doctor</label>
+        <select name="doctor_id" class="form-select-custom form-select-sm" onchange="this.form.submit()">
+          <option value="">All Doctors</option>
+          {% for doc in doctors %}
+            <option value="{{ doc.id }}" {% if selected_doctor == doc.id %}selected{% endif %}>{{ doc.name }} ({{ doc.specialization }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2 d-flex align-items-end pt-3">
+        {% if selected_status or selected_date or selected_doctor %}
+          <a href="{{ url_for('appointments.index') }}" class="btn btn-sm btn-outline-secondary w-100">Reset Filters</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Appointments Table -->
+<div class="card-box">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-calendar-week text-primary"></i> Consultations Queue ({{ appointments|length }})</h3>
+  </div>
+  <div class="custom-table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Date & Slot</th>
+          <th>Patient</th>
+          <th>Doctor</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for apt in appointments %}
+        <tr>
+          <td>
+            <div class="fw-bold">{{ apt.appointment_date.strftime('%a, %b %d, %Y') }}</div>
+            <span class="badge bg-primary-subtle text-primary font-monospace">{{ apt.time_slot }}</span>
+          </td>
+          <td>
+            <a href="{{ url_for('patients.profile', patient_id=apt.patient.id) }}" class="fw-bold text-dark text-decoration-none">
+              {{ apt.patient.name }}
+            </a>
+            <div class="text-muted fs-8">{{ apt.patient.patient_no }} &bull; {{ apt.patient.phone or '' }}</div>
+          </td>
+          <td>
+            <div class="fw-semibold">{{ apt.doctor.name }}</div>
+            <div class="text-muted fs-8">{{ apt.doctor.specialization }} ({{ apt.doctor.room_no or 'Suite A' }})</div>
+          </td>
+          <td>
+            <span class="text-truncate d-inline-block" style="max-width: 220px;" title="{{ apt.reason }}">
+              {{ apt.reason or 'Routine follow-up' }}
+            </span>
+          </td>
+          <td>
+            <span class="badge-custom badge-{{ apt.status.lower() }}">{{ apt.status }}</span>
+          </td>
+          <td>
+            <div class="d-flex gap-1 align-items-center">
+              <!-- Fast Status Update Button -->
+              {% if apt.status == 'Scheduled' %}
+                <form method="POST" action="{{ url_for('appointments.update_status', appointment_id=apt.id) }}">
+                  <input type="hidden" name="status" value="In-Progress">
+                  <button type="submit" class="btn btn-sm btn-outline-primary" title="Start Consultation">
+                    <i class="bi bi-play-fill"></i> Start
+                  </button>
+                </form>
+              {% elif apt.status == 'In-Progress' %}
+                <form method="POST" action="{{ url_for('appointments.update_status', appointment_id=apt.id) }}">
+                  <input type="hidden" name="status" value="Completed">
+                  <button type="submit" class="btn btn-sm btn-outline-success" title="Mark Done">
+                    <i class="bi bi-check-lg"></i> Done
+                  </button>
+                </form>
+                <a href="{{ url_for('medical_records.create', patient_id=apt.patient.id) }}" class="btn btn-sm btn-success" title="Document Clinical Record">
+                  <i class="bi bi-file-earmark-medical"></i> Clinical
+                </a>
+              {% endif %}
+
+              <!-- Dropdown actions -->
+              <div class="dropdown">
+                <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                  <li>
+                    <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#rescheduleModal{{ apt.id }}">
+                      <i class="bi bi-calendar-event me-2"></i> Reschedule
+                    </button>
+                  </li>
+                  {% if apt.status != 'Cancelled' %}
+                  <li>
+                    <form method="POST" action="{{ url_for('appointments.update_status', appointment_id=apt.id) }}">
+                      <input type="hidden" name="status" value="Cancelled">
+                      <button type="submit" class="dropdown-item text-danger">
+                        <i class="bi bi-x-circle me-2"></i> Cancel Appointment
+                      </button>
+                    </form>
+                  </li>
+                  {% endif %}
+                </ul>
+              </div>
+            </div>
+
+            <!-- Reschedule Modal -->
+            <div class="modal fade" id="rescheduleModal{{ apt.id }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content border-0 shadow">
+                  <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Reschedule Appointment #{{ apt.id }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form method="POST" action="{{ url_for('appointments.reschedule', appointment_id=apt.id) }}">
+                    <div class="modal-body">
+                      <p class="small text-muted mb-3">
+                        Patient: <strong>{{ apt.patient.name }}</strong> &bull; Doctor: <strong>{{ apt.doctor.name }}</strong>
+                      </p>
+                      <div class="mb-3">
+                        <label class="form-label-custom">New Date</label>
+                        <input type="date" name="appointment_date" class="form-control-custom" value="{{ apt.appointment_date.strftime('%Y-%m-%d') }}" required>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label-custom">New Time Slot</label>
+                        <select name="time_slot" class="form-select-custom" required>
+                          {% for slot in ["09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM", "04:00 PM"] %}
+                            <option value="{{ slot }}" {% if apt.time_slot == slot %}selected{% endif %}>{{ slot }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn-outline-custom" data-bs-dismiss="modal">Close</button>
+                      <button type="submit" class="btn-primary-custom">Save Rescheduled Slot</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center py-5 text-muted">
+            <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
+            No appointments found for the selected filter.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

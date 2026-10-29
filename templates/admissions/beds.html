@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% block title %}Rooms & Ward Bed Matrix | CarePulse HMS{% endblock %}
+
+{% block content %}
+<style>
+  .rooms-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+  }
+  .room-stat-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.35rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+  }
+  .room-stat-card:hover {
+    transform: translateY(-3px);
+    border-color: #cbd5e1;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+  }
+  .room-stat-card.active-filter {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25), 0 8px 20px rgba(0, 0, 0, 0.05);
+  }
+  .room-stat-card::after {
+    content: '';
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    width: 95px;
+    height: 95px;
+    background: radial-gradient(circle, var(--stat-glow) 0%, transparent 70%);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .room-stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+  .room-stat-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .room-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    background: #f8fafc;
+    box-shadow: 0 2px 10px var(--stat-glow);
+  }
+  .room-stat-value {
+    font-size: 1.95rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.4rem;
+  }
+  .room-stat-meta {
+    font-size: 0.76rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .room-stat-meta strong {
+    color: #334155;
+  }
+  .filter-pill-btn {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .filter-pill-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+  }
+  .filter-pill-btn.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+  }
+</style>
+
+<div class="page-header mb-4">
+  <div>
+    <h1 class="page-title">Live Ward & Bed Matrix</h1>
+    <p class="page-subtitle">Real-time room occupancy, active inpatient census, and sanitized bed availability across clinical wards</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('admissions.admit') }}" class="btn-primary-custom">
+      <i class="bi bi-door-open-fill"></i> Admit Patient
+    </a>
+  </div>
+</div>
+
+<!-- 4 Interactive Overview Stat Cards -->
+<div class="rooms-stat-grid">
+  <!-- 1. Total Suites & Beds -->
+  <div class="room-stat-card active-filter" id="cardTotalBeds" style="--stat-glow: rgba(245, 158, 11, 0.25);" onclick="filterBedMatrix('ALL', this)" title="Click to view all rooms and beds">
+    <div class="room-stat-header">
+      <span class="room-stat-label">Total Suites & Beds</span>
+      <div class="room-stat-icon">🏥</div>
+    </div>
+    <div class="room-stat-value text-dark" id="displayTotalBeds">{{ total_beds }} Units</div>
+    <div class="room-stat-meta">
+      <span>Across {{ wards|length }} hospital wards &bull; <strong>Click to View All</strong></span>
+    </div>
+  </div>
+
+  <!-- 2. Currently Occupied -->
+  <div class="room-stat-card" id="cardOccupiedBeds" style="--stat-glow: rgba(16, 185, 129, 0.3);" onclick="filterBedMatrix('OCCUPIED', this)" title="Click to show only occupied beds">
+    <div class="room-stat-header">
+      <span class="room-stat-label">Currently Occupied</span>
+      <div class="room-stat-icon">🟢</div>
+    </div>
+    <div class="room-stat-value" style="color: #10b981;" id="displayOccupiedBeds">{{ occupied_beds }} Members</div>
+    <div class="room-stat-meta">
+      <span style="color: #10b981; font-weight: 700;">{{ occupancy_pct }}%</span>
+      <span>census &bull; <strong>Click to Show Members</strong></span>
+    </div>
+  </div>
+
+  <!-- 3. Available & Cleaned -->
+  <div class="room-stat-card" id="cardAvailableBeds" style="--stat-glow: rgba(14, 165, 233, 0.3);" onclick="filterBedMatrix('AVAILABLE', this)" title="Click to show only available beds ready for intake">
+    <div class="room-stat-header">
+      <span class="room-stat-label">Available & Cleaned</span>
+      <div class="room-stat-icon">✨</div>
+    </div>
+    <div class="room-stat-value" style="color: #0284c7;" id="displayAvailableBeds">{{ available_beds }} Suites</div>
+    <div class="room-stat-meta">
+      <span>Intake ready &bull; <strong>Click to Show</strong></span>
+    </div>
+  </div>
+
+  <!-- 4. Maintenance / Cycle -->
+  <div class="room-stat-card" id="cardMaintenanceBeds" style="--stat-glow: rgba(244, 63, 94, 0.3);" onclick="filterBedMatrix('MAINTENANCE', this)" title="Click to show beds undergoing sanitization">
+    <div class="room-stat-header">
+      <span class="room-stat-label">Maintenance / Cycle</span>
+      <div class="room-stat-icon">🧹</div>
+    </div>
+    <div class="room-stat-value" style="color: #f43f5e;" id="displayMaintenanceBeds">{{ maintenance_beds }} Unit{% if maintenance_beds != 1 %}s{% endif %}</div>
+    <div class="room-stat-meta">
+      <span>HEPA cycle &bull; <strong>Click to Show</strong></span>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Bar & Active Indicator -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <span class="fw-bold small text-muted text-uppercase me-1" style="font-size: 0.72rem; letter-spacing: 0.05em;">Filter By:</span>
+    <button type="button" class="filter-pill-btn active" id="btnFilterAll" onclick="filterBedMatrix('ALL')">
+      All Units ({{ total_beds }})
+    </button>
+    <button type="button" class="filter-pill-btn" id="btnFilterOccupied" onclick="filterBedMatrix('OCCUPIED')">
+      <span class="text-success">&bull;</span> Occupied ({{ occupied_beds }})
+    </button>
+    <button type="button" class="filter-pill-btn" id="btnFilterAvailable" onclick="filterBedMatrix('AVAILABLE')">
+      <span class="text-primary">&bull;</span> Available ({{ available_beds }})
+    </button>
+    <button type="button" class="filter-pill-btn" id="btnFilterMaintenance" onclick="filterBedMatrix('MAINTENANCE')">
+      <span class="text-danger">&bull;</span> Maintenance ({{ maintenance_beds }})
+    </button>
+  </div>
+  <div class="text-muted small">
+    Showing: <strong id="filterStatusLabel" class="text-dark">All {{ total_beds }} Beds</strong>
+  </div>
+</div>
+
+<!-- Ward Sections -->
+{% for ward in wards %}
+<div class="card-box mb-4 ward-container" data-ward-id="{{ ward.id }}">
+  <div class="card-header-custom d-flex justify-content-between align-items-center">
+    <div>
+      <h3 class="card-title-custom mb-1">
+        <i class="bi bi-hospital text-primary me-1"></i> {{ ward.ward_name }}
+      </h3>
+      <div class="text-muted small">
+        Category: <strong>{{ ward.ward_type }}</strong> &bull; Floor: <strong>{{ ward.floor }}</strong> &bull; Total Capacity: <strong>{{ ward.beds.count() }} Units</strong>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+        {{ ward.beds.filter_by(status='Available').count() }} Available
+      </span>
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">
+        {{ ward.beds.filter_by(status='Occupied').count() }} Occupied
+      </span>
+    </div>
+  </div>
+  <div class="card-body-custom">
+    <div class="bed-matrix-grid">
+      {% for bed in ward.beds %}
+      <div class="bed-box {{ bed.status.lower() }}" data-status="{{ bed.status.upper() }}">
+        <div class="bed-icon">
+          {% if bed.status == 'Available' %}
+            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+          {% elif bed.status == 'Occupied' %}
+            <i class="bi bi-person-fill text-danger fs-4"></i>
+          {% else %}
+            <i class="bi bi-tools text-warning fs-4"></i>
+          {% endif %}
+        </div>
+        <div class="bed-number text-dark fw-bold mt-1">{{ bed.bed_number }}</div>
+        <div class="bed-status-text {% if bed.status == 'Available' %}text-success{% elif bed.status == 'Occupied' %}text-danger{% else %}text-warning{% endif %} fw-semibold">
+          {{ bed.status }}
+        </div>
+        <div class="text-muted fs-8 mt-1">${{ bed.daily_rate }}/day</div>
+
+        <!-- If occupied, show who is in the bed -->
+        {% if bed.status == 'Occupied' %}
+          {% set cur_adm = bed.admissions.filter_by(status='Admitted').first() %}
+          {% if cur_adm %}
+            <div class="mt-2 pt-2 border-top fs-8 text-truncate" title="{{ cur_adm.patient.name }}">
+              <div class="text-muted fs-9">Admitted Member:</div>
+              <a href="{{ url_for('patients.profile', patient_id=cur_adm.patient.id) }}" class="fw-bold text-dark text-decoration-none">
+                {{ cur_adm.patient.name }}
+              </a>
+              {% if cur_adm.reason %}
+              <div class="text-muted fs-9 text-truncate" title="{{ cur_adm.reason }}">{{ cur_adm.reason }}</div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% elif current_user.has_role('admin', 'nurse') %}
+          <!-- Maintenance Toggle for unoccupied beds -->
+          <form method="POST" action="{{ url_for('admissions.update_bed_status', bed_id=bed.id) }}" class="mt-2 pt-2 border-top">
+            {% if bed.status == 'Available' %}
+              <input type="hidden" name="status" value="Maintenance">
+              <button type="submit" class="btn btn-sm btn-outline-warning w-100 py-0 fs-8">Set Maint.</button>
+            {% else %}
+              <input type="hidden" name="status" value="Available">
+              <button type="submit" class="btn btn-sm btn-outline-success w-100 py-0 fs-8">Set Ready</button>
+            {% endif %}
+          </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<script>
+  function filterBedMatrix(status, clickedCard) {
+    // 1. Update active card outline
+    document.querySelectorAll('.room-stat-card').forEach(card => card.classList.remove('active-filter'));
+    if (clickedCard) {
+      clickedCard.classList.add('active-filter');
+    } else {
+      if (status === 'ALL') document.getElementById('cardTotalBeds').classList.add('active-filter');
+      if (status === 'OCCUPIED') document.getElementById('cardOccupiedBeds').classList.add('active-filter');
+      if (status === 'AVAILABLE') document.getElementById('cardAvailableBeds').classList.add('active-filter');
+      if (status === 'MAINTENANCE') document.getElementById('cardMaintenanceBeds').classList.add('active-filter');
+    }
+
+    // 2. Update pill buttons
+    document.querySelectorAll('.filter-pill-btn').forEach(btn => btn.classList.remove('active'));
+    if (status === 'ALL') document.getElementById('btnFilterAll').classList.add('active');
+    if (status === 'OCCUPIED') document.getElementById('btnFilterOccupied').classList.add('active');
+    if (status === 'AVAILABLE') document.getElementById('btnFilterAvailable').classList.add('active');
+    if (status === 'MAINTENANCE') document.getElementById('btnFilterMaintenance').classList.add('active');
+
+    // 3. Update status label
+    const label = document.getElementById('filterStatusLabel');
+    if (label) {
+      if (status === 'ALL') label.textContent = 'All {{ total_beds }} Units';
+      if (status === 'OCCUPIED') label.textContent = 'Occupied Members Only ({{ occupied_beds }} Units)';
+      if (status === 'AVAILABLE') label.textContent = 'Available Suites Ready for Intake ({{ available_beds }} Units)';
+      if (status === 'MAINTENANCE') label.textContent = 'Units in Sanitation Cycle ({{ maintenance_beds }} Units)';
+    }
+
+    // 4. Filter the bed elements
+    let visibleCount = 0;
+    const allBedBoxes = document.querySelectorAll('.bed-box');
+    allBedBoxes.forEach(box => {
+      const boxStatus = box.getAttribute('data-status');
+      if (status === 'ALL' || boxStatus === status) {
+        box.style.display = '';
+        visibleCount++;
+      } else {
+        box.style.display = 'none';
+      }
+    });
+
+    // 5. Hide empty wards if all beds inside are hidden
+    document.querySelectorAll('.ward-container').forEach(ward => {
+      const visibleBeds = ward.querySelectorAll('.bed-box:not([style*="display: none"])');
+      ward.style.display = visibleBeds.length > 0 ? '' : 'none';
+    });
+  }
+</script>
+{% endblock %}

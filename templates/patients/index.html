@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Patient Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Patient Directory</h1>
+    <p class="page-subtitle">Search, register, and maintain comprehensive electronic medical profiles</p>
+  </div>
+  <a href="{{ url_for('patients.register') }}" class="btn-primary-custom">
+    <i class="bi bi-person-plus-fill"></i> Register New Patient
+  </a>
+</div>
+
+<div class="card-box">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-people text-primary"></i> Registered Patients ({{ patients|length }})</h3>
+    <form method="GET" class="d-flex gap-2">
+      <div class="input-group">
+        <input type="text" name="q" class="form-control-custom" placeholder="Search by name, ID, phone..." value="{{ query }}">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+      </div>
+      {% if query %}
+        <a href="{{ url_for('patients.index') }}" class="btn btn-outline-secondary">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="custom-table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Patient ID</th>
+          <th>Patient Name</th>
+          <th>Age / Gender</th>
+          <th>Blood Group</th>
+          <th>Phone</th>
+          <th>Allergies</th>
+          <th>Registered</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in patients %}
+        <tr>
+          <td>
+            <span class="badge bg-primary-subtle text-primary fw-bold font-monospace px-2 py-1">
+              {{ p.patient_no }}
+            </span>
+          </td>
+          <td>
+            <a href="{{ url_for('patients.profile', patient_id=p.id) }}" class="fw-bold text-dark text-decoration-none">
+              {{ p.name }}
+            </a>
+            <div class="text-muted fs-8">{{ p.email or 'No email' }}</div>
+          </td>
+          <td>{{ p.age }} yrs / {{ p.gender or '—' }}</td>
+          <td>
+            {% if p.blood_group %}
+              <span class="badge bg-danger-subtle text-danger fw-bold">{{ p.blood_group }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>{{ p.phone or '—' }}</td>
+          <td>
+            {% if p.allergies and p.allergies != 'None' %}
+              <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-exclamation-triangle"></i> {{ p.allergies }}</span>
+            {% else %}
+              <span class="text-muted small">None</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ p.created_at.strftime('%b %d, %Y') }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{{ url_for('patients.profile', patient_id=p.id) }}" class="btn btn-sm btn-outline-primary" title="View Dossier">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{{ url_for('patients.edit', patient_id=p.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center py-5 text-muted">
+            <i class="bi bi-person-x fs-1 d-block mb-2"></i>
+            No patient records found matching your query.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

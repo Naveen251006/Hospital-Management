@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% block title %}Patient Dossier: {{ patient.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="d-flex align-items-center gap-3">
+      <h1 class="page-title mb-0">{{ patient.name }}</h1>
+      <span class="badge bg-primary-subtle text-primary font-monospace fs-6 px-3 py-1">{{ patient.patient_no }}</span>
+    </div>
+    <p class="page-subtitle">Complete Electronic Health Dossier & Clinical Timeline</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('patients.edit', patient_id=patient.id) }}" class="btn-outline-custom">
+      <i class="bi bi-pencil"></i> Edit Details
+    </a>
+    <a href="{{ url_for('patients.index') }}" class="btn-outline-custom">
+      <i class="bi bi-arrow-left"></i> Directory
+    </a>
+  </div>
+</div>
+
+<!-- Patient Summary Banner Card -->
+<div class="card-box mb-4">
+  <div class="card-body-custom">
+    <div class="row g-4 align-items-center">
+      <div class="col-md-2 text-center border-end">
+        <div class="user-avatar-circle mx-auto mb-2" style="width: 72px; height: 72px; font-size: 1.8rem; background: linear-gradient(135deg, #2563eb, #7c3aed);">
+          {{ patient.name[:2].upper() }}
+        </div>
+        <div class="fw-bold fs-6">{{ patient.gender or 'Unspecified' }}</div>
+        <div class="text-muted small">{{ patient.age }} Years Old</div>
+      </div>
+      <div class="col-md-6 border-end">
+        <div class="row g-2">
+          <div class="col-6">
+            <span class="text-muted small d-block">Phone:</span>
+            <span class="fw-semibold">{{ patient.phone or '—' }}</span>
+          </div>
+          <div class="col-6">
+            <span class="text-muted small d-block">Email:</span>
+            <span class="fw-semibold">{{ patient.email or '—' }}</span>
+          </div>
+          <div class="col-12">
+            <span class="text-muted small d-block">Address:</span>
+            <span class="fw-semibold">{{ patient.address or '—' }}</span>
+          </div>
+          <div class="col-12">
+            <span class="text-muted small d-block">Emergency Contact:</span>
+            <span class="fw-semibold text-danger">{{ patient.emergency_contact or '—' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-3 bg-light rounded-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted small">Blood Type:</span>
+            <span class="badge bg-danger text-white fw-bold">{{ patient.blood_group or 'Unknown' }}</span>
+          </div>
+          <div class="mb-2">
+            <span class="text-muted small d-block">Allergies / Alerts:</span>
+            {% if patient.allergies and patient.allergies != 'None' %}
+              <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-exclamation-triangle"></i> {{ patient.allergies }}</span>
+            {% else %}
+              <span class="text-success small"><i class="bi bi-check-circle"></i> No known drug allergies</span>
+            {% endif %}
+          </div>
+          <div class="text-muted fs-8">Registered on: {{ patient.created_at.strftime('%b %d, %Y') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Action Strip for this Patient -->
+    <div class="d-flex flex-wrap gap-2 pt-3 mt-3 border-top">
+      <a href="{{ url_for('appointments.book', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-calendar-plus me-1"></i> Book Appointment
+      </a>
+      <a href="{{ url_for('medical_records.create', patient_id=patient.id) }}" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-file-earmark-medical me-1"></i> Document Consultation
+      </a>
+      <a href="{{ url_for('laboratory.order', patient_id=patient.id) }}" class="btn btn-sm btn-outline-info">
+        <i class="bi bi-virus2 me-1"></i> Order Lab Test
+      </a>
+      <a href="{{ url_for('admissions.admit', patient_id=patient.id) }}" class="btn btn-sm btn-outline-warning">
+        <i class="bi bi-door-open me-1"></i> Inpatient Admission
+      </a>
+      <a href="{{ url_for('billing.create', patient_id=patient.id) }}" class="btn btn-sm btn-outline-dark">
+        <i class="bi bi-receipt me-1"></i> Generate Invoice
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs for Dossier Sections -->
+<ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#tab-records">
+      <i class="bi bi-journal-medical me-1"></i> Medical Records ({{ patient.medical_records.count() }})
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#tab-rx">
+      <i class="bi bi-capsule me-1"></i> Prescriptions ({{ patient.prescriptions.count() }})
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#tab-apts">
+      <i class="bi bi-calendar-check me-1"></i> Appointments ({{ patient.appointments.count() }})
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#tab-admissions">
+      <i class="bi bi-hospital me-1"></i> Admissions ({{ patient.admissions.count() }})
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#tab-billing">
+      <i class="bi bi-receipt me-1"></i> Billing ({{ patient.invoices.count() }})
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="pills-tabContent">
+  <!-- Medical Records Tab -->
+  <div class="tab-pane fade show active" id="tab-records">
+    <div class="card-box">
+      <div class="custom-table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Doctor</th>
+              <th>Diagnosis</th>
+              <th>Vitals (BP / Pulse / Temp / SpO2)</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rec in patient.medical_records.all() %}
+            <tr>
+              <td>{{ rec.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td class="fw-bold">{{ rec.doctor.name }}</td>
+              <td><span class="fw-semibold text-primary">{{ rec.diagnosis }}</span></td>
+              <td>
+                <span class="badge bg-light text-dark font-monospace">
+                  BP: {{ rec.bp or '-' }} | Pulse: {{ rec.pulse or '-' }} | Temp: {{ rec.temperature or '-' }} | SpO2: {{ rec.spo2 or '-' }}%
+                </span>
+              </td>
+              <td>
+                <a href="{{ url_for('medical_records.detail', record_id=rec.id) }}" class="btn btn-sm btn-outline-primary">
+                  View Full Note
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">No clinical consultation notes recorded yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prescriptions Tab -->
+  <div class="tab-pane fade" id="tab-rx">
+    <div class="card-box">
+      <div class="custom-table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Doctor</th>
+              <th>Prescribed Medications</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rx in patient.prescriptions.all() %}
+            <tr>
+              <td>{{ rx.created_at.strftime('%Y-%m-%d') }}</td>
+              <td>{{ rx.doctor.name }}</td>
+              <td>
+                <ul class="mb-0 ps-3 small">
+                  {% for itm in rx.items %}
+                    <li><strong>{{ itm.medicine_name }}</strong> ({{ itm.dosage }}) - {{ itm.frequency }} for {{ itm.duration }}</li>
+                  {% endfor %}
+                </ul>
+              </td>
+              <td><span class="badge-custom badge-{{ rx.status.lower() }}">{{ rx.status }}</span></td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="4" class="text-center py-4 text-muted">No prescriptions recorded yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Appointments Tab -->
+  <div class="tab-pane fade" id="tab-apts">
+    <div class="card-box">
+      <div class="custom-table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Doctor</th>
+              <th>Reason</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for apt in patient.appointments.all() %}
+            <tr>
+              <td>{{ apt.appointment_date.strftime('%Y-%m-%d') }}</td>
+              <td class="fw-bold">{{ apt.time_slot }}</td>
+              <td>{{ apt.doctor.name }}</td>
+              <td>{{ apt.reason or '—' }}</td>
+              <td><span class="badge-custom badge-{{ apt.status.lower() }}">{{ apt.status }}</span></td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">No appointments found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admissions Tab -->
+  <div class="tab-pane fade" id="tab-admissions">
+    <div class="card-box">
+      <div class="custom-table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Admitted</th>
+              <th>Discharged</th>
+              <th>Ward & Bed</th>
+              <th>Doctor</th>
+              <th>Reason</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for adm in patient.admissions.all() %}
+            <tr>
+              <td>{{ adm.admission_date.strftime('%Y-%m-%d') }}</td>
+              <td>{{ adm.discharge_date.strftime('%Y-%m-%d') if adm.discharge_date else 'Current' }}</td>
+              <td class="fw-bold">{{ adm.bed.ward.ward_name }} ({{ adm.bed.bed_number }})</td>
+              <td>{{ adm.doctor.name }}</td>
+              <td>{{ adm.reason }}</td>
+              <td><span class="badge-custom badge-{{ adm.status.lower() }}">{{ adm.status }}</span></td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">No inpatient admission records.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Billing Tab -->
+  <div class="tab-pane fade" id="tab-billing">
+    <div class="card-box">
+      <div class="custom-table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Invoice No</th>
+              <th>Date</th>
+              <th>Total Amount</th>
+              <th>Paid Amount</th>
+              <th>Balance Due</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inv in patient.invoices.all() %}
+            <tr>
+              <td class="fw-bold font-monospace text-primary">{{ inv.invoice_no }}</td>
+              <td>{{ inv.created_at.strftime('%Y-%m-%d') }}</td>
+              <td>${{ "{:,.2f}".format(inv.total_amount) }}</td>
+              <td class="text-success">${{ "{:,.2f}".format(inv.paid_amount) }}</td>
+              <td class="{% if inv.balance_due > 0 %}text-danger fw-bold{% endif %}">${{ "{:,.2f}".format(inv.balance_due) }}</td>
+              <td><span class="badge-custom badge-{{ inv.status.lower().replace(' ', '-') }}">{{ inv.status }}</span></td>
+              <td>
+                <a href="{{ url_for('billing.invoice_detail', invoice_id=inv.id) }}" class="btn btn-sm btn-outline-primary">View Bill</a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">No billing invoices issued yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

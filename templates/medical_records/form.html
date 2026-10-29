@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Document Consultation & Prescription{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Document Clinical Consultation</h1>
+    <p class="page-subtitle">Record clinical examination notes, vital signs, and issue itemized electronic prescriptions</p>
+  </div>
+  <a href="{{ url_for('medical_records.index') }}" class="btn-outline-custom">
+    <i class="bi bi-arrow-left"></i> Back to Records
+  </a>
+</div>
+
+<form method="POST">
+  <div class="row g-4">
+    <!-- Left Column: Clinical Diagnosis & Vitals -->
+    <div class="col-lg-6">
+      <div class="card-box mb-4">
+        <div class="card-header-custom">
+          <h3 class="card-title-custom"><i class="bi bi-person-heart text-danger"></i> Patient & Encounter Details</h3>
+        </div>
+        <div class="card-body-custom">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label-custom">Select Patient *</label>
+              <select name="patient_id" class="form-select-custom" required>
+                <option value="">Choose Patient...</option>
+                {% for p in patients %}
+                  <option value="{{ p.id }}" {% if preselected_patient_id == p.id %}selected{% endif %}>
+                    {{ p.name }} ({{ p.patient_no }})
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label-custom">Attending Physician *</label>
+              <select name="doctor_id" class="form-select-custom" required>
+                <option value="">Choose Doctor...</option>
+                {% for doc in doctors %}
+                  <option value="{{ doc.id }}" {% if current_user.role == 'doctor' and current_user.doctor_profile and current_user.doctor_profile.id == doc.id %}selected{% endif %}>
+                    {{ doc.name }} ({{ doc.specialization }})
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Vital Signs -->
+            <div class="col-12 mt-3">
+              <h6 class="fw-bold text-muted small text-uppercase">Vital Signs Assessment</h6>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label-custom">Blood Pressure</label>
+              <input type="text" name="bp" class="form-control-custom" placeholder="e.g. 120/80">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label-custom">Pulse Rate (bpm)</label>
+              <input type="text" name="pulse" class="form-control-custom" placeholder="e.g. 72">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label-custom">Temp (°F)</label>
+              <input type="text" name="temperature" class="form-control-custom" placeholder="e.g. 98.6">
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label-custom">Oxygen SpO2 (%)</label>
+              <input type="text" name="spo2" class="form-control-custom" placeholder="e.g. 99">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label-custom">Primary Clinical Diagnosis *</label>
+              <input type="text" name="diagnosis" class="form-control-custom" required placeholder="e.g. Acute Bronchitis, Hypertension Stage 1...">
+            </div>
+
+            <div class="col-12">
+              <label class="form-label-custom">Presenting Symptoms</label>
+              <textarea name="symptoms" rows="2" class="form-control-custom" placeholder="Patient complaints, duration, severity..."></textarea>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label-custom">Clinical & Treatment Notes</label>
+              <textarea name="treatment_notes" rows="3" class="form-control-custom" placeholder="Observations, systemic examination findings, follow-up instructions..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Electronic Prescription Builder -->
+    <div class="col-lg-6">
+      <div class="card-box mb-4">
+        <div class="card-header-custom">
+          <h3 class="card-title-custom"><i class="bi bi-capsule text-primary"></i> Prescribe Medications (Rx)</h3>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="add-rx-row-btn">
+            <i class="bi bi-plus-circle"></i> Add Medication
+          </button>
+        </div>
+        <div class="card-body-custom">
+          <p class="text-muted small mb-3">Add medications from pharmacy inventory or enter custom dosage schedules:</p>
+
+          <div id="rx-items-container">
+            <!-- Medication Row Template -->
+            <div class="rx-item-row p-3 bg-light rounded-3 mb-3 border">
+              <div class="row g-2">
+                <div class="col-md-7">
+                  <label class="form-label-custom small">Select Medicine</label>
+                  <select name="medicine_id[]" class="form-select-custom form-select-sm">
+                    <option value="">Custom / OTC...</option>
+                    {% for m in medicines %}
+                      <option value="{{ m.id }}">{{ m.medicine_name }} ({{ m.quantity }} in stock)</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label-custom small">Dosage</label>
+                  <input type="text" name="dosage[]" class="form-control-custom form-control-sm" placeholder="e.g. 500mg">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label-custom small">Frequency</label>
+                  <input type="text" name="frequency[]" class="form-control-custom form-control-sm" placeholder="e.g. Twice daily after meals">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label-custom small">Duration</label>
+                  <input type="text" name="duration[]" class="form-control-custom form-control-sm" placeholder="e.g. 5 days">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                  <button type="button" class="btn btn-sm btn-outline-danger w-100 remove-rx-row-btn" title="Remove">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+                <div class="col-12">
+                  <input type="text" name="instructions[]" class="form-control-custom form-control-sm" placeholder="Special patient instructions (optional)">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label-custom">General Prescription Advice / Dietary Restrictions</label>
+            <textarea name="prescription_notes" rows="2" class="form-control-custom" placeholder="e.g. Increase fluid intake, rest for 3 days..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-box p-3 d-flex justify-content-between align-items-center">
+        <span class="text-muted small"><i class="bi bi-info-circle"></i> Once submitted, prescription is routed to the pharmacy counter.</span>
+        <button type="submit" class="btn-primary-custom">
+          <i class="bi bi-check2-circle"></i> Save Consultation & Prescription
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Dispense Medication{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dispense Formulary Medication</h1>
+    <p class="page-subtitle">Process clinical prescriptions or direct outpatient dispensing with inventory deduction</p>
+  </div>
+  <a href="{{ url_for('pharmacy.index') }}" class="btn-outline-custom">
+    <i class="bi bi-arrow-left"></i> Back to Pharmacy
+  </a>
+</div>
+
+<div class="row g-4">
+  <!-- Dispense Form -->
+  <div class="col-lg-7">
+    <div class="card-box">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom"><i class="bi bi-box-arrow-up-right text-primary"></i> Medication Dispense Counter</h3>
+      </div>
+      <div class="card-body-custom">
+        <form method="POST">
+          <div class="mb-3">
+            <label class="form-label-custom">Link to Pending Prescription (Optional)</label>
+            <select name="prescription_id" class="form-select-custom">
+              <option value="">Direct / OTC Dispense...</option>
+              {% for rx in pending_prescriptions %}
+                <option value="{{ rx.id }}">
+                  Rx #{{ rx.id }} - {{ rx.patient.name }} (Dr. {{ rx.doctor.name }}) - {{ rx.created_at.strftime('%b %d') }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label-custom">Select Patient *</label>
+            <select name="patient_id" class="form-select-custom" required>
+              <option value="">Choose Patient...</option>
+              {% for p in patients %}
+                <option value="{{ p.id }}">{{ p.name }} ({{ p.patient_no }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label-custom">Select Medication from Stock *</label>
+            <select name="medicine_id" class="form-select-custom" required>
+              <option value="">Choose Medication...</option>
+              {% for med in medicines %}
+                <option value="{{ med.id }}">
+                  {{ med.medicine_name }} [Batch: {{ med.batch_no }}] - ${{ med.unit_price }} ({{ med.quantity }} available)
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label-custom">Units / Quantity to Dispense *</label>
+            <input type="number" name="quantity" class="form-control-custom" value="1" min="1" required>
+          </div>
+
+          <div class="form-check p-3 bg-light rounded-3 mb-4">
+            <input class="form-check-input" type="checkbox" name="create_bill" value="1" id="createBill" checked>
+            <label class="form-check-label fw-semibold small" for="createBill">
+              Generate pharmacy sales invoice automatically
+            </label>
+            <div class="text-muted fs-8">Directly bills the patient account for the dispensed medication quantity.</div>
+          </div>
+
+          <button type="submit" class="btn-primary-custom w-100 justify-content-center py-2">
+            <i class="bi bi-check2-circle"></i> Complete Dispensing & Deduct Stock
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Prescriptions Queue -->
+  <div class="col-lg-5">
+    <div class="card-box">
+      <div class="card-header-custom">
+        <h3 class="card-title-custom"><i class="bi bi-clock-history text-warning"></i> Pending Prescriptions ({{ pending_prescriptions|length }})</h3>
+      </div>
+      <div class="card-body-custom p-0">
+        <div class="list-group list-group-flush">
+          {% for rx in pending_prescriptions %}
+          <div class="list-group-item px-4 py-3">
+            <div class="d-flex justify-content-between mb-1">
+              <strong>{{ rx.patient.name }}</strong>
+              <span class="badge bg-warning-subtle text-warning">Pending</span>
+            </div>
+            <div class="text-muted small mb-2">Prescribed by {{ rx.doctor.name }} on {{ rx.created_at.strftime('%Y-%m-%d') }}</div>
+            <ul class="mb-0 ps-3 small text-secondary">
+              {% for itm in rx.items %}
+                <li>{{ itm.medicine_name }} ({{ itm.dosage }}) - {{ itm.duration }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted small">No pending prescriptions in the queue.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{% if patient %}Edit Patient{% else %}Register New Patient{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% if patient %}Edit Patient: {{ patient.name }}{% else %}Patient Registration{% endif %}</h1>
+    <p class="page-subtitle">Enter clinical demographic information and emergency contacts</p>
+  </div>
+  <a href="{{ url_for('patients.index') }}" class="btn-outline-custom">
+    <i class="bi bi-arrow-left"></i> Back to Directory
+  </a>
+</div>
+
+<div class="card-box" style="max-width: 900px;">
+  <div class="card-header-custom">
+    <h3 class="card-title-custom"><i class="bi bi-person-lines-fill text-primary"></i> Patient Demographics & Health Profile</h3>
+    <span class="badge bg-primary-subtle text-primary fw-bold font-monospace px-3 py-2">
+      ID: {{ auto_patient_no }}
+    </span>
+  </div>
+  <div class="card-body-custom">
+    <form method="POST">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label-custom">Full Name *</label>
+          <input type="text" name="name" class="form-control-custom" value="{{ patient.name if patient else '' }}" required placeholder="e.g. Johnathan Doe">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label-custom">Date of Birth</label>
+          <input type="date" name="date_of_birth" class="form-control-custom" value="{{ patient.date_of_birth.strftime('%Y-%m-%d') if patient and patient.date_of_birth else '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label-custom">Gender</label>
+          <select name="gender" class="form-select-custom">
+            <option value="">Select Gender</option>
+            <option value="Male" {% if patient and patient.gender == 'Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if patient and patient.gender == 'Female' %}selected{% endif %}>Female</option>
+            <option value="Other" {% if patient and patient.gender == 'Other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label-custom">Phone Number</label>
+          <input type="tel" name="phone" class="form-control-custom" value="{{ patient.phone if patient else '' }}" placeholder="+1 555-0199">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label-custom">Email Address</label>
+          <input type="email" name="email" class="form-control-custom" value="{{ patient.email if patient else '' }}" placeholder="patient@example.com">
+        </div>
+
+        <div class="col-12">
+          <label class="form-label-custom">Residential Address</label>
+          <input type="text" name="address" class="form-control-custom" value="{{ patient.address if patient else '' }}" placeholder="Street address, City, State">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label-custom">Blood Group</label>
+          <select name="blood_group" class="form-select-custom">
+            <option value="">Unknown</option>
+            {% for bg in ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] %}
+              <option value="{{ bg }}" {% if patient and patient.blood_group == bg %}selected{% endif %}>{{ bg }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label-custom">Emergency Contact Person & Phone</label>
+          <input type="text" name="emergency_contact" class="form-control-custom" value="{{ patient.emergency_contact if patient else '' }}" placeholder="e.g. Mary Doe (Spouse) - +1 555-0122">
+        </div>
+
+        <div class="col-12">
+          <label class="form-label-custom">Known Allergies / Medical Alerts</label>
+          <textarea name="allergies" rows="2" class="form-control-custom" placeholder="e.g. Penicillin, Peanuts, Latex, None...">{{ patient.allergies if patient else '' }}</textarea>
+          <small class="text-muted">Enter any known drug sensitivities or clinical contraindications.</small>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+        <a href="{{ url_for('patients.index') }}" class="btn-outline-custom">Cancel</a>
+        <button type="submit" class="btn-primary-custom">
+          <i class="bi bi-check2-circle"></i> {% if patient %}Update Record{% else %}Complete Registration{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
